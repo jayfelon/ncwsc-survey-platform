@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NCWSC Survey Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --navy:#0b1f3a;--blue:#1d5fa6;--teal:#0c8a73;--gold:#f0a500;
+  --water:#3db4d0;--light:#f4f7fb;--white:#fff;--gray:#6b7a90;
+  --border:#e2e8f3;--danger:#e53e3e;--success:#38a169;--purple:#6c4fd8;
+  --sidebar:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--light);color:var(--navy);display:flex;min-height:100vh;}
+.sidebar{width:var(--sidebar);background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
+.sidebar-brand{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:.6rem;}
+.brand-icon{width:34px;height:34px;background:var(--water);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.brand-name{font-family:'Syne',sans-serif;color:#fff;font-size:.95rem;font-weight:700;line-height:1.2;}
+.brand-name small{display:block;color:rgba(255,255,255,.4);font-size:.68rem;font-weight:400;font-family:'Inter',sans-serif;}
+.sidebar-nav{flex:1;padding:1rem .75rem;display:flex;flex-direction:column;gap:.2rem;}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.65rem .85rem;border-radius:9px;color:rgba(255,255,255,.55);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .18s;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.nav-item.active{background:rgba(61,180,208,.15);color:var(--water);}
+.nav-item .icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0;}
+.nav-section{font-size:.68rem;font-weight:600;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.8px;padding:.75rem .85rem .3rem;}
+.sidebar-user{padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.08);}
+.user-chip{display:flex;align-items:center;gap:.7rem;padding:.5rem .6rem;border-radius:9px;}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--water));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0;}
+.user-info{min-width:0;}
+.user-name{font-size:.82rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-role{font-size:.7rem;color:rgba(255,255,255,.4);}
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;color:var(--navy);}
+.topbar-sub{font-size:.8rem;color:var(--gray);margin-top:.1rem;}
+.topbar-actions{display:flex;gap:.6rem;align-items:center;}
+.btn{padding:.5rem 1.1rem;border-radius:8px;font-family:'Inter',sans-serif;font-size:.825rem;font-weight:600;cursor:pointer;border:none;transition:all .18s;display:inline-flex;align-items:center;gap:.4rem;}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(29,95,166,.3);}
+.btn-primary:hover{background:#1650a0;transform:translateY(-1px);}
+.btn-ghost{background:transparent;color:var(--gray);border:1.5px solid var(--border);}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-sm{padding:.35rem .75rem;font-size:.775rem;}
+.content{padding:1.75rem 2rem;flex:1;}
+.panel{display:none;} .panel.active{display:block;}
+.surveys-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.surveys-meta{font-size:.82rem;color:var(--gray);}
+.surveys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.1rem;}
+.survey-card{background:#fff;border-radius:14px;padding:1.25rem 1.4rem;border:1.5px solid var(--border);cursor:pointer;transition:all .2s;position:relative;}
+.survey-card:hover{border-color:var(--water);box-shadow:0 6px 24px rgba(29,95,166,.1);transform:translateY(-2px);}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem;}
+.card-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--navy);line-height:1.3;}
+.card-desc{font-size:.8rem;color:var(--gray);margin-bottom:1rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.badge{font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;}
+.badge-live{background:#e6f9f2;color:var(--teal);}
+.badge-closed{background:#f3f4f6;color:#9ca3af;}
+.card-meta{display:flex;align-items:center;gap:1rem;font-size:.78rem;color:var(--gray);}
+.card-actions{display:flex;gap:.4rem;margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--border);}
+.card-btn{padding:.3rem .7rem;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--gray);transition:all .15s;}
+.card-btn:hover{border-color:var(--blue);color:var(--blue);}
+.card-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+.modal-overlay{position:fixed;inset:0;background:rgba(11,31,58,.6);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;backdrop-filter:blur(3px);}
+.modal-overlay.hidden{display:none;}
+.modal{background:#fff;border-radius:18px;padding:2rem;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;}
+.modal-sm{max-width:420px;} .modal-md{max-width:600px;} .modal-lg{max-width:900px;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.modal-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--navy);}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--gray);line-height:1;padding:.2rem;}
+.modal-footer{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+.form-group{margin-bottom:1rem;}
+.form-label{display:block;font-size:.82rem;font-weight:600;color:var(--navy);margin-bottom:.4rem;}
+.form-input,.form-select,.form-textarea{width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:.875rem;color:var(--navy);background:var(--light);transition:border-color .2s;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--water);background:#fff;}
+.form-textarea{resize:vertical;min-height:80px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:var(--light);border-radius:9px;border:1.5px solid var(--border);}
+.toggle-label{font-size:.85rem;font-weight:500;color:var(--navy);}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+.toggle input{display:none;}
+.toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:11px;cursor:pointer;transition:.3s;}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.toggle input:checked~.toggle-slider{background:var(--teal);}
+.toggle input:checked~.toggle-slider::before{transform:translateX(18px);}
+.builder-wrap{display:grid;grid-template-columns:1fr 300px;gap:1.25rem;align-items:start;}
+.builder-canvas{background:#fff;border-radius:14px;border:1.5px solid var(--border);overflow:hidden;}
+.builder-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);background:linear-gradient(135deg,var(--navy),#1d3a6e);}
+.builder-header input{background:transparent;border:none;color:#fff;font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;width:100%;}
+.builder-header input::placeholder{color:rgba(255,255,255,.4);}
+.builder-header input:focus{outline:none;}
+.builder-header textarea{background:transparent;border:none;color:rgba(255,255,255,.65);font-family:'Inter',sans-serif;font-size:.82rem;width:100%;resize:none;margin-top:.3rem;}
+.builder-header textarea:focus{outline:none;}
+.color-dots{display:flex;gap:.4rem;margin-top:.75rem;}
+.color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;transition:transform .15s;border:2px solid transparent;}
+.color-dot.active,.color-dot:hover{transform:scale(1.2);border-color:#fff;}
+.questions-list{padding:1rem;}
+.question-block{background:var(--light);border-radius:10px;padding:1rem 1.1rem;margin-bottom:.75rem;border:1.5px solid transparent;transition:all .2s;}
+.question-block:hover{border-color:var(--water);}
+.q-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;}
+.q-num{width:24px;height:24px;background:var(--blue);color:#fff;border-radius:50%;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.q-input{flex:1;border:none;background:transparent;font-family:'Inter',sans-serif;font-size:.875rem;font-weight:500;color:var(--navy);}
+.q-input:focus{outline:none;}
+.q-delete{background:none;border:none;color:var(--gray);cursor:pointer;font-size:.95rem;padding:.2rem;border-radius:5px;transition:all .15s;}
+.q-delete:hover{background:#fee2e2;color:var(--danger);}
+.q-type-select{padding:.35rem .65rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:'Inter',sans-serif;color:var(--gray);background:#fff;cursor:pointer;}
+.q-required{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--gray);margin-top:.5rem;}
+.options-list{margin:.5rem 0;}
+.option-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;}
+.option-input{flex:1;padding:.3rem .6rem;border:1.5px solid var(--border);border-radius:6px;font-size:.82rem;font-family:'Inter',sans-serif;}
+.option-input:focus{outline:none;border-color:var(--water);}
+.add-option-btn{font-size:.78rem;color:var(--blue);background:none;border:none;cursor:pointer;padding:.2rem 0;font-weight:500;}
+.add-question-bar{padding:1rem;border-top:1px solid var(--border);display:flex;gap:.4rem;flex-wrap:wrap;}
+.q-type-btn{padding:.4rem .8rem;border-radius:7px;font-size:.75rem;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--gray);transition:all .15s;}
+.q-type-btn:hover{border-color:var(--blue);color:var(--blue);}
+.builder-sidebar{display:flex;flex-direction:column;gap:1rem;}
+.builder-panel{background:#fff;border-radius:14px;border:1.5px solid var(--border);padding:1.1rem 1.25rem;}
+.builder-panel h3{font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.85rem;}
+.results-header{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.stat-card{background:#fff;border-radius:12px;padding:1.1rem 1.3rem;border:1.5px solid var(--border);}
+.stat-label{font-size:.75rem;color:var(--gray);font-weight:500;text-transform:uppercase;letter-spacing:.4px;}
+.stat-value{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:700;color:var(--navy);margin:.25rem 0;}
+.stat-card.highlight .stat-value{color:var(--teal);}
+.q-result{background:#fff;border-radius:12px;padding:1.25rem 1.4rem;margin-bottom:1rem;border:1.5px solid var(--border);}
+.q-result-header{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;}
+.q-label{background:var(--blue);color:#fff;font-size:.7rem;font-weight:700;padding:.2rem .5rem;border-radius:5px;}
+.q-text{font-weight:600;font-size:.9rem;color:var(--navy);}
+.q-count{margin-left:auto;font-size:.78rem;color:var(--gray);}
+.bar-result{margin:.4rem 0;}
+.bar-label{display:flex;justify-content:space-between;font-size:.8rem;color:var(--navy);margin-bottom:.25rem;}
+.bar-track{background:var(--light);border-radius:6px;height:10px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--water));transition:width .8s ease;}
+.rating-display{font-size:2rem;font-weight:700;color:var(--teal);display:flex;align-items:baseline;gap:.4rem;}
+.rating-display span{font-size:1rem;color:var(--gray);font-weight:400;}
+.stars{color:var(--gold);font-size:1.3rem;margin-top:.2rem;}
+.text-response{background:var(--light);border-left:3px solid var(--water);padding:.6rem .85rem;border-radius:0 8px 8px 0;margin:.4rem 0;font-size:.82rem;color:var(--navy);}
+.scale-display{display:flex;align-items:center;gap:.75rem;}
+.scale-bar{flex:1;height:12px;background:var(--light);border-radius:6px;overflow:hidden;}
+.scale-fill{height:100%;background:linear-gradient(90deg,var(--danger),var(--gold),var(--teal));transition:width .8s ease;}
+.scale-value{font-size:1.5rem;font-weight:700;color:var(--teal);font-family:'Syne',sans-serif;}
+.scale-max{font-size:.8rem;color:var(--gray);}
+.analytics-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.recent-table{width:100%;border-collapse:collapse;font-size:.825rem;}
+.recent-table th{background:var(--navy);color:#fff;padding:.6rem 1rem;text-align:left;font-weight:500;font-size:.78rem;}
+.recent-table td{padding:.55rem 1rem;border-bottom:1px solid var(--border);}
+.recent-table tr:hover td{background:var(--light);}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--teal);display:inline-block;margin-right:.35rem;box-shadow:0 0 5px var(--teal);}
+.team-card{background:#fff;border-radius:14px;border:1.5px solid var(--border);padding:1.25rem 1.5rem;max-width:620px;}
+.team-card h3{font-size:.9rem;font-weight:700;color:var(--navy);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;}
+.member-row{display:flex;align-items:center;gap:.85rem;padding:.65rem 0;border-bottom:1px solid var(--border);}
+.member-row:last-child{border-bottom:none;}
+.member-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:#fff;flex-shrink:0;}
+.member-info{flex:1;min-width:0;}
+.member-name{font-size:.875rem;font-weight:600;color:var(--navy);}
+.member-email{font-size:.75rem;color:var(--gray);}
+.role-badge{font-size:.7rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;text-transform:uppercase;}
+.role-owner{background:#fef3c7;color:#92400e;}
+.role-admin{background:#e0e7ff;color:#3730a3;}
+.role-viewer{background:#f0fdf4;color:#166534;}
+.settings-section{background:#fff;border-radius:14px;border:1.5px solid var(--border);padding:1.5rem;margin-bottom:1rem;max-width:560px;}
+.settings-section h3{font-size:.9rem;font-weight:700;color:var(--navy);margin-bottom:1.1rem;}
+.danger-zone{border-color:var(--danger)!important;}
+.danger-zone h3{color:var(--danger);}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;padding:.85rem 1.25rem;border-radius:10px;font-weight:500;font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.18);transform:translateY(80px);opacity:0;transition:all .35s cubic-bezier(.175,.885,.32,1.275);z-index:999;display:flex;align-items:center;gap:.5rem;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--teal);color:#fff;}
+.toast.error{background:var(--danger);color:#fff;}
+.toast.info{background:var(--blue);color:#fff;}
+.section-card{background:#fff;border-radius:14px;border:1.5px solid var(--border);padding:1.5rem;margin-bottom:1rem;}
+.flex-between{display:flex;align-items:center;justify-content:space-between;}
+.gap-sm{gap:.5rem;} .flex{display:flex;align-items:center;}
+.mb-1{margin-bottom:.75rem;} .fw-600{font-weight:600;}
+.chip{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+
+/* ── SUPABASE SETUP OVERLAY ── */
+.sb-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0b1f3a,#0d2d50);display:flex;align-items:center;justify-content:center;z-index:900;padding:1rem;}
+.sb-overlay.hidden{display:none;}
+.sb-card{background:#fff;border-radius:20px;padding:2.5rem;max-width:540px;width:100%;box-shadow:0 40px 100px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;}
+.sb-card h2{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:var(--navy);margin-bottom:.35rem;}
+.sb-card>p{color:var(--gray);font-size:.85rem;margin-bottom:1.5rem;line-height:1.6;}
+.sb-step{display:flex;gap:.85rem;margin-bottom:1.1rem;}
+.sb-num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.sb-step h4{font-size:.85rem;font-weight:600;color:var(--navy);margin-bottom:.2rem;}
+.sb-step p{font-size:.8rem;color:var(--gray);margin:0;line-height:1.5;}
+.sb-step code{background:#f0f4ff;color:var(--blue);padding:.1rem .35rem;border-radius:4px;font-size:.78rem;font-family:monospace;}
+.sb-sql{background:#f0f4ff;padding:.85rem;border-radius:8px;font-size:.72rem;color:#1a3a6e;font-family:monospace;line-height:1.8;margin-top:.5rem;overflow-x:auto;white-space:pre;border:1px solid #d0deff;}
+.sb-inputs{margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1.5rem;}
+.sb-connect-btn{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;margin-top:.75rem;transition:opacity .2s;}
+.sb-connect-btn:hover{opacity:.9;}
+.sb-skip{width:100%;padding:.5rem;background:none;border:none;color:var(--gray);font-size:.8rem;cursor:pointer;margin-top:.5rem;}
+.sb-skip:hover{color:var(--navy);}
+
+/* ── DB STATUS PILL ── */
+.db-pill{display:flex;align-items:center;gap:.4rem;padding:.3rem .85rem;border-radius:20px;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;}
+.db-pill:hover{border-color:var(--blue);}
+.db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+.db-dot.connected{background:var(--success);box-shadow:0 0 6px var(--success);}
+.db-dot.local{background:var(--gold);}
+.db-dot.error{background:var(--danger);}
+.db-dot.loading{background:#ccc;animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+@media(max-width:900px){
+  .sidebar{width:64px;}
+  .sidebar .brand-name,.sidebar .nav-item span,.sidebar .user-info,.sidebar .nav-section{display:none;}
+  .main{margin-left:64px;}
+  .builder-wrap{grid-template-columns:1fr;}
+  .results-header,.analytics-kpis{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SUPABASE SETUP OVERLAY ══ -->
+<div class="sb-overlay" id="sbOverlay">
+  <div class="sb-card">
+    <h2>⚡ Connect to Supabase</h2>
+    <p>Set up your database once — all surveys, responses and team members will be shared across every device and browser automatically.</p>
+
+    <div class="sb-step">
+      <div class="sb-num">1</div>
+      <div>
+        <h4>Create a free Supabase project</h4>
+        <p>Go to <strong>supabase.com</strong> → New Project. Name it <code>ncwsc-platform</code>.</p>
+      </div>
+    </div>
+    <div class="sb-step">
+      <div class="sb-num">2</div>
+      <div>
+        <h4>Run this SQL in Supabase → SQL Editor</h4>
+        <div class="sb-sql">CREATE TABLE surveys (
+  id text PRIMARY KEY,
+  title text, description text, category text,
+  status text, color text, created text,
+  questions jsonb DEFAULT '[]'
+);
+CREATE TABLE responses (
+  id text PRIMARY KEY,
+  survey_id text REFERENCES surveys(id) ON DELETE CASCADE,
+  ts text, data jsonb
+);
+CREATE TABLE team_members (
+  id text PRIMARY KEY,
+  name text, email text, role text,
+  initials text, color text
+);
+ALTER TABLE surveys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_all" ON surveys FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "public_all" ON responses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "public_all" ON team_members FOR ALL USING (true) WITH CHECK (true);</div>
+      </div>
+    </div>
+    <div class="sb-step">
+      <div class="sb-num">3</div>
+      <div>
+        <h4>Get your credentials</h4>
+        <p>Go to <strong>Settings → API</strong> in your Supabase project. Copy the <code>Project URL</code> and <code>anon public</code> key below.</p>
+      </div>
+    </div>
+
+    <div class="sb-inputs">
+      <div class="form-group">
+        <label class="form-label">Supabase Project URL</label>
+        <input class="form-input" id="sbUrl" placeholder="https://xyzabcdef.supabase.co"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Supabase Anon Key</label>
+        <input class="form-input" id="sbKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dashboard Passcode <span style="color:var(--gray);font-weight:400">(protects admin access)</span></label>
+        <input class="form-input" id="sbPasscode" type="password" placeholder="Choose a passcode"/>
+      </div>
+      <button class="sb-connect-btn" onclick="connectSupabase()">Connect &amp; Launch →</button>
+      <button class="sb-skip" onclick="skipToLocal()">Continue without database (local mode)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PASSCODE GATE ══ -->
+<div class="modal-overlay hidden" id="gateOverlay" style="z-index:800">
+  <div class="modal modal-sm" style="text-align:center">
+    <div style="font-size:2rem;margin-bottom:.75rem">🔐</div>
+    <div class="modal-title" style="justify-content:center;margin-bottom:.4rem">Admin Access</div>
+    <p style="color:var(--gray);font-size:.85rem;margin-bottom:1.25rem">Enter your passcode to access the platform</p>
+    <input class="form-input" id="gateInput" type="password" placeholder="••••••••" style="text-align:center;letter-spacing:.3em;font-size:1rem" onkeydown="if(event.key==='Enter')checkGate()"/>
+    <div style="color:var(--danger);font-size:.8rem;margin-top:.5rem;height:1rem" id="gateError"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.75rem" onclick="checkGate()">Unlock →</button>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">💧</div>
+    <div class="brand-name">NCWSC<small>Survey Platform</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <button class="nav-item active" onclick="nav('surveys',this)"><span class="icon">📋</span><span>Surveys</span></button>
+    <button class="nav-item" onclick="nav('analytics',this)"><span class="icon">📊</span><span>Analytics</span></button>
+    <button class="nav-item" onclick="nav('team',this)"><span class="icon">👥</span><span>Team</span></button>
+    <button class="nav-item" onclick="nav('settings',this)"><span class="icon">⚙️</span><span>Settings</span></button>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatarSidebar">GN</div>
+      <div class="user-info">
+        <div class="user-name" id="userNameSidebar">George N.</div>
+        <div class="user-role" id="userRoleSidebar">Owner</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topbarTitle">My Surveys</div>
+      <div class="topbar-sub" id="topbarSub">Manage and analyse all your surveys</div>
+    </div>
+    <div class="topbar-actions" id="topbarActions">
+      <div class="db-pill" id="dbPill" onclick="openModal('modalDbConfig')" title="Database status">
+        <div class="db-dot loading" id="dbDot"></div>
+        <span id="dbLabel">Connecting…</span>
+      </div>
+      <button class="btn btn-primary" onclick="openNewSurveyModal()">＋ New Survey</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- SURVEYS PANEL -->
+    <div class="panel active" id="panel-surveys">
+      <div class="surveys-header">
+        <div class="surveys-meta" id="surveysMeta">Loading…</div>
+        <div class="flex gap-sm">
+          <input class="form-input" style="width:200px;padding:.4rem .75rem" placeholder="🔍 Search surveys…" oninput="filterSurveys(this.value)"/>
+        </div>
+      </div>
+      <div class="surveys-grid" id="surveysGrid"></div>
+    </div>
+
+    <!-- BUILDER PANEL -->
+    <div class="panel" id="panel-builder">
+      <div class="builder-wrap">
+        <div class="builder-canvas">
+          <div class="builder-header">
+            <input id="bTitle" placeholder="Survey Title…" maxlength="80"/>
+            <textarea id="bDesc" placeholder="Description…" rows="2"></textarea>
+            <div class="color-dots" id="colorDots"></div>
+          </div>
+          <div class="questions-list" id="questionsList"></div>
+          <div class="add-question-bar">
+            <span style="font-size:.75rem;font-weight:600;color:var(--gray);margin-right:.3rem">Add:</span>
+            <button class="q-type-btn" onclick="addQuestion('short')">Aa Short Answer</button>
+            <button class="q-type-btn" onclick="addQuestion('paragraph')">¶ Paragraph</button>
+            <button class="q-type-btn" onclick="addQuestion('multiple')">⊙ Multiple Choice</button>
+            <button class="q-type-btn" onclick="addQuestion('checkbox')">☑ Checkboxes</button>
+            <button class="q-type-btn" onclick="addQuestion('dropdown')">▾ Dropdown</button>
+            <button class="q-type-btn" onclick="addQuestion('rating')">★ Rating</button>
+            <button class="q-type-btn" onclick="addQuestion('scale')">↔ Scale</button>
+          </div>
+        </div>
+        <div class="builder-sidebar">
+          <div class="builder-panel">
+            <h3>Survey Settings</h3>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="bStatus"><option value="live">🟢 Live</option><option value="closed">⚫ Closed</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="form-select" id="bCategory">
+                <option>Water Quality</option><option>Billing &amp; Payments</option>
+                <option>Service Reliability</option><option>Customer Service</option>
+                <option>New Connection</option><option>Conservation</option><option>General</option>
+              </select>
+            </div>
+          </div>
+          <div class="builder-panel">
+            <h3>Preview &amp; Publish</h3>
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:.5rem" onclick="previewSurvey()">👁 Preview</button>
+            <button class="btn btn-primary" style="width:100%" onclick="saveSurvey()">✓ Save Survey</button>
+          </div>
+          <div class="builder-panel">
+            <h3>Share Link</h3>
+            <div style="background:var(--light);border-radius:8px;padding:.6rem .85rem;font-size:.75rem;color:var(--gray);word-break:break-all;" id="shareLink">Save the survey first</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="panel" id="panel-results">
+      <div class="results-header" id="resultsHeader"></div>
+      <div id="resultsBody"></div>
+    </div>
+
+    <!-- ANALYTICS PANEL -->
+    <div class="panel" id="panel-analytics">
+      <div class="analytics-kpis" id="analyticsKpis"></div>
+      <div class="section-card">
+        <div class="flex-between mb-1">
+          <div class="fw-600" style="font-size:.9rem">Recent Responses</div>
+          <span class="chip" style="background:#e0f7f4;color:var(--teal)">Last 7 days</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="recent-table">
+            <thead><tr><th></th><th>Survey</th><th>When</th><th>Highlight</th></tr></thead>
+            <tbody id="recentBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM PANEL -->
+    <div class="panel" id="panel-team">
+      <div class="team-card">
+        <h3>Team Access <button class="btn btn-primary btn-sm" onclick="openInviteModal()">＋ Invite</button></h3>
+        <div id="membersList"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div class="panel" id="panel-settings">
+      <div class="settings-section">
+        <h3>General</h3>
+        <div class="form-group"><label class="form-label">Workspace Name</label><input class="form-input" id="wsName" value="NCWSC Survey Platform"/></div>
+        <div class="form-group"><label class="form-label">Admin Email</label><input class="form-input" id="wsEmail" value="admin@ncwsc.go.ke"/></div>
+        <div class="form-group">
+          <label class="form-label" style="margin-bottom:.6rem">Notifications</label>
+          <div style="display:flex;flex-direction:column;gap:.5rem">
+            <div class="toggle-wrap"><span class="toggle-label">Email alerts for new responses</span><label class="toggle"><input type="checkbox" id="togEmail" checked><div class="toggle-slider"></div></label></div>
+            <div class="toggle-wrap"><span class="toggle-label">SMS alerts for response spikes</span><label class="toggle"><input type="checkbox" id="togSMS" checked><div class="toggle-slider"></div></label></div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Changes</button>
+      </div>
+      <div class="settings-section">
+        <h3>Branding</h3>
+        <div class="form-group"><div class="toggle-wrap"><span class="toggle-label">Show logo on forms</span><label class="toggle"><input type="checkbox" id="togLogo" checked><div class="toggle-slider"></div></label></div></div>
+        <div class="form-group"><label class="form-label">Thank-you message</label><input class="form-input" id="thankMsg" value="Thank you for your feedback!"/></div>
+        <div class="form-group"><label class="form-label">Support contact</label><input class="form-input" id="supportContact" placeholder="support@ncwsc.go.ke"/></div>
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Changes</button>
+      </div>
+      <div class="settings-section">
+        <h3>Database</h3>
+        <div style="font-size:.82rem;color:var(--gray);margin-bottom:.85rem">Supabase connection details</div>
+        <div class="form-group"><label class="form-label">Project URL</label><input class="form-input" id="settingsSbUrl" placeholder="https://…"/></div>
+        <div class="form-group"><label class="form-label">Anon Key</label><input class="form-input" id="settingsSbKey" placeholder="eyJ…"/></div>
+        <div class="form-group"><label class="form-label">Change Passcode</label><input class="form-input" id="settingsPasscode" type="password" placeholder="New passcode"/></div>
+        <button class="btn btn-primary btn-sm" onclick="updateDbSettings()">Update Connection</button>
+      </div>
+      <div class="settings-section danger-zone">
+        <h3>Danger Zone</h3>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteResponses()">Delete all responses</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteWorkspace()">Reset workspace</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- DB CONFIG MODAL -->
+<div class="modal-overlay hidden" id="modalDbConfig">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Database Connection</div>
+      <button class="modal-close" onclick="closeModal('modalDbConfig')">✕</button>
+    </div>
+    <div id="dbConfigStatus" style="padding:.75rem;border-radius:9px;background:var(--light);font-size:.85rem;margin-bottom:1rem;color:var(--gray)">Checking…</div>
+    <div class="form-group"><label class="form-label">Supabase URL</label><input class="form-input" id="cfgUrl"/></div>
+    <div class="form-group"><label class="form-label">Anon Key</label><input class="form-input" id="cfgKey"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalDbConfig')">Cancel</button>
+      <button class="btn btn-primary" onclick="applyDbConfig()">Reconnect</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW SURVEY MODAL -->
+<div class="modal-overlay hidden" id="modalNewSurvey">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">New Survey</div><button class="modal-close" onclick="closeModal('modalNewSurvey')">✕</button></div>
+    <div class="form-group"><label class="form-label">Survey Title</label><input class="form-input" id="newTitle" placeholder="e.g. Water Quality Feedback"/></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="newDesc" placeholder="What is this survey about?"></textarea></div>
+    <div class="form-group"><label class="form-label">Category</label>
+      <select class="form-select" id="newCategory">
+        <option>Water Quality</option><option>Billing &amp; Payments</option><option>Service Reliability</option>
+        <option>Customer Service</option><option>New Connection</option><option>Conservation</option><option>General</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalNewSurvey')">Cancel</button>
+      <button class="btn btn-primary" onclick="createSurvey()">Create &amp; Build →</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MODAL -->
+<div class="modal-overlay hidden" id="modalInvite">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">Invite Team Member</div><button class="modal-close" onclick="closeModal('modalInvite')">✕</button></div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="inviteName"/></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="inviteEmail"/></div>
+    <div class="form-group"><label class="form-label">Role</label>
+      <select class="form-select" id="inviteRole">
+        <option value="admin">Admin — can build &amp; view all surveys</option>
+        <option value="viewer">Viewer — can only view results</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalInvite')">Cancel</button>
+      <button class="btn btn-primary" onclick="inviteMember()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="modal-overlay hidden" id="modalPreview">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">Survey Preview</div><button class="modal-close" onclick="closeModal('modalPreview')">✕</button></div>
+    <div id="previewContent"></div>
+  </div>
+</div>
+
+<!-- FILL MODAL -->
+<div class="modal-overlay hidden" id="modalFill">
+  <div class="modal modal-md">
+    <div class="modal-header"><div class="modal-title" id="fillTitle"></div><button class="modal-close" onclick="closeModal('modalFill')">✕</button></div>
+    <div id="fillContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  ▼▼▼  PASTE YOUR SUPABASE CREDENTIALS HERE  ▼▼▼
+// ════════════════════════════════════════════════════
+const HARDCODED_URL = 'YOUR_SUPABASE_URL';   // e.g. https://abc.supabase.co
+const HARDCODED_KEY = 'YOUR_SUPABASE_ANON_KEY'; // e.g. eyJhbGci...
+const HARDCODED_PASSCODE = 'NCWSC2025';      // change to your passcode
+// ════════════════════════════════════════════════════
+
+let SB_URL = HARDCODED_URL;
+let SB_KEY  = HARDCODED_KEY;
+let PASSCODE = HARDCODED_PASSCODE;
+let DB_MODE = 'loading'; // 'supabase' | 'local' | 'loading'
+let sessionUnlocked = false;
+
+// ── In-memory state (used in local mode or as cache) ──
+let state = {
+  surveys: [],
+  team: [
+    {id:'t1',name:'George Njuguna',email:'george@ncwsc.go.ke',role:'owner',initials:'GN',color:'#1d5fa6'},
+    {id:'t2',name:'Amina Hassan',email:'amina@ncwsc.go.ke',role:'admin',initials:'AH',color:'#0c8a73'},
+    {id:'t3',name:'Brian Kimani',email:'brian@ncwsc.go.ke',role:'admin',initials:'BK',color:'#f0a500'},
+    {id:'t4',name:'Faith Muthoni',email:'faith@ncwsc.go.ke',role:'viewer',initials:'FM',color:'#6c4fd8'}
+  ]
+};
+
+let currentSurveyId = null;
+let editingQuestions = [];
+let currentColor = '#1d5fa6';
+const COLORS = ['#1d5fa6','#f0a500','#e53e3e','#0c8a73','#6c4fd8','#3db4d0'];
+
+// ════════════════════════════════════════════════════
+//  SUPABASE REST HELPERS
+// ════════════════════════════════════════════════════
+function sbFetch(path, opts={}) {
+  return fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || (opts.method==='POST'?'return=representation':''),
+      ...(opts.headers||{})
+    }
+  });
+}
+
+async function sbGet(table, query='') {
+  const r = await sbFetch(`${table}?${query}`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sbInsert(table, data) {
+  const r = await sbFetch(table, {method:'POST', body:JSON.stringify(data), prefer:'return=representation'});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sbUpdate(table, id, data) {
+  const r = await sbFetch(`${table}?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(data), prefer:'return=minimal'});
+  if (!r.ok) throw new Error(await r.text());
+}
+
+async function sbDelete(table, query) {
+  const r = await sbFetch(`${table}?${query}`, {method:'DELETE'});
+  if (!r.ok) throw new Error(await r.text());
+}
+
+async function sbUpsert(table, data) {
+  const r = await sbFetch(table, {method:'POST', body:JSON.stringify(data), prefer:'return=minimal', headers:{'Prefer':'resolution=merge-duplicates'}});
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ════════════════════════════════════════════════════
+//  CONNECTION & INIT
+// ════════════════════════════════════════════════════
+async function testConnection() {
+  setDbStatus('loading','Connecting…');
+  try {
+    const r = await sbFetch('surveys?select=id&limit=1');
+    if (r.ok) {
+      DB_MODE = 'supabase';
+      setDbStatus('connected','Supabase live');
+      return true;
+    } else {
+      throw new Error('HTTP '+r.status);
+    }
+  } catch(e) {
+    DB_MODE = 'local';
+    setDbStatus('local','Local mode');
+    return false;
+  }
+}
+
+function setDbStatus(state, label) {
+  document.getElementById('dbDot').className = 'db-dot ' + state;
+  document.getElementById('dbLabel').textContent = label;
+}
+
+async function loadAllData() {
+  if (DB_MODE !== 'supabase') {
+    // Load from localStorage fallback
+    const saved = JSON.parse(localStorage.getItem('ncwsc_local')||'null');
+    if (saved) { state.surveys = saved.surveys||[]; state.team = saved.team||state.team; }
+    return;
+  }
+  try {
+    const [surveys, responses, team] = await Promise.all([
+      sbGet('surveys', 'select=*&order=created.desc'),
+      sbGet('responses', 'select=*&order=ts.desc'),
+      sbGet('team_members', 'select=*')
+    ]);
+    // Attach responses to surveys
+    state.surveys = surveys.map(s => ({
+      ...s,
+      desc: s.description,
+      questions: s.questions || [],
+      responses: responses.filter(r => r.survey_id === s.id).map(r => ({
+        id: r.id, ts: r.ts, data: r.data
+      }))
+    }));
+    if (team.length) state.team = team;
+  } catch(e) {
+    showToast('Could not load data: '+e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  SAVE HELPERS
+// ════════════════════════════════════════════════════
+function saveLocal() {
+  localStorage.setItem('ncwsc_local', JSON.stringify({surveys: state.surveys, team: state.team}));
+}
+
+async function saveSurveyToDB(s) {
+  if (DB_MODE !== 'supabase') { saveLocal(); return; }
+  try {
+    await sbUpsert('surveys', {
+      id: s.id, title: s.title, description: s.desc,
+      category: s.category, status: s.status,
+      color: s.color, created: s.created,
+      questions: s.questions
+    });
+  } catch(e) { showToast('DB save error: '+e.message,'error'); }
+}
+
+async function deleteSurveyFromDB(id) {
+  if (DB_MODE !== 'supabase') { saveLocal(); return; }
+  try { await sbDelete('surveys', `id=eq.${id}`); } catch(e) { showToast('Delete error','error'); }
+}
+
+async function saveResponseToDB(surveyId, response) {
+  if (DB_MODE !== 'supabase') { saveLocal(); return; }
+  try {
+    await sbInsert('responses', {
+      id: response.id, survey_id: surveyId,
+      ts: response.ts, data: response.data
+    });
+  } catch(e) { showToast('Response save error: '+e.message,'error'); throw e; }
+}
+
+async function saveTeamMemberToDB(m) {
+  if (DB_MODE !== 'supabase') { saveLocal(); return; }
+  try { await sbUpsert('team_members', m); } catch(e) { showToast('Team save error','error'); }
+}
+
+async function deleteTeamMemberFromDB(id) {
+  if (DB_MODE !== 'supabase') { saveLocal(); return; }
+  try { await sbDelete('team_members', `id=eq.${id}`); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
+//  SETUP OVERLAY
+// ════════════════════════════════════════════════════
+async function connectSupabase() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const key = document.getElementById('sbKey').value.trim();
+  const pass = document.getElementById('sbPasscode').value.trim();
+  if (!url || !key) { showToast('Please enter URL and Key','error'); return; }
+  if (!pass) { showToast('Please set a passcode','error'); return; }
+  SB_URL = url; SB_KEY = key; PASSCODE = pass;
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  localStorage.setItem('sb_pass', pass);
+  const ok = await testConnection();
+  if (ok) {
+    document.getElementById('sbOverlay').classList.add('hidden');
+    sessionUnlocked = true;
+    await loadAllData();
+    initUI();
+  } else {
+    showToast('Could not connect — check URL and key','error');
+  }
+}
+
+function skipToLocal() {
+  DB_MODE = 'local';
+  setDbStatus('local','Local mode');
+  document.getElementById('sbOverlay').classList.add('hidden');
+  sessionUnlocked = true;
+  const saved = JSON.parse(localStorage.getItem('ncwsc_local')||'null');
+  if (saved) { state.surveys = saved.surveys||[]; state.team = saved.team||state.team; }
+  initUI();
+}
+
+// ════════════════════════════════════════════════════
+//  PASSCODE GATE
+// ════════════════════════════════════════════════════
+function checkGate() {
+  const val = document.getElementById('gateInput').value;
+  if (val === PASSCODE) {
+    sessionUnlocked = true;
+    document.getElementById('gateOverlay').classList.add('hidden');
+    document.getElementById('gateError').textContent = '';
+    document.getElementById('gateInput').value = '';
+  } else {
+    document.getElementById('gateError').textContent = 'Incorrect passcode.';
+    document.getElementById('gateInput').value = '';
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  DB CONFIG MODAL
+// ════════════════════════════════════════════════════
+function openModal(id) {
+  if (id === 'modalDbConfig') {
+    document.getElementById('cfgUrl').value = SB_URL;
+    document.getElementById('cfgKey').value = SB_KEY;
+    document.getElementById('dbConfigStatus').textContent =
+      DB_MODE === 'supabase' ? '🟢 Connected to Supabase' :
+      DB_MODE === 'local'    ? '🟡 Running in local mode' : '⏳ Connecting…';
+  }
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+async function applyDbConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const key = document.getElementById('cfgKey').value.trim();
+  if (!url||!key) return;
+  SB_URL=url; SB_KEY=key;
+  localStorage.setItem('sb_url',url); localStorage.setItem('sb_key',key);
+  closeModal('modalDbConfig');
+  const ok = await testConnection();
+  if (ok) { await loadAllData(); renderSurveys(); showToast('Reconnected to Supabase','success'); }
+  else showToast('Connection failed','error');
+}
+
+// ════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════
+function nav(panel, btn) {
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('panel-'+panel).classList.add('active');
+  const titles={surveys:['My Surveys','Manage and analyse all your surveys'],
+    analytics:['Analytics','Monitor responses across all surveys'],
+    team:['Team','Control access'],settings:['Settings','Configure workspace']};
+  const t=titles[panel]||['',''];
+  document.getElementById('topbarTitle').textContent=t[0];
+  document.getElementById('topbarSub').textContent=t[1];
+  const actions=document.getElementById('topbarActions');
+  const dbPillHtml=`<div class="db-pill" id="dbPill" onclick="openModal('modalDbConfig')" title="Database status"><div class="db-dot ${DB_MODE==='supabase'?'connected':DB_MODE==='local'?'local':'loading'}" id="dbDot"></div><span id="dbLabel">${DB_MODE==='supabase'?'Supabase live':DB_MODE==='local'?'Local mode':'…'}</span></div>`;
+  if(panel==='surveys') actions.innerHTML=dbPillHtml+`<button class="btn btn-primary" onclick="openNewSurveyModal()">＋ New Survey</button>`;
+  else actions.innerHTML=dbPillHtml;
+  if(panel==='surveys') renderSurveys();
+  if(panel==='analytics') renderAnalytics();
+  if(panel==='team') renderTeam();
+  if(panel==='settings') {
+    document.getElementById('settingsSbUrl').value=SB_URL;
+    document.getElementById('settingsSbKey').value=SB_KEY;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  SURVEYS
+// ════════════════════════════════════════════════════
+function renderSurveys(filter='') {
+  const total = state.surveys.reduce((a,s)=>a+s.responses.length,0);
+  document.getElementById('surveysMeta').textContent=`${state.surveys.length} surveys · ${total} responses`;
+  const filtered=state.surveys.filter(s=>s.title.toLowerCase().includes(filter.toLowerCase()));
+  document.getElementById('surveysGrid').innerHTML=filtered.map(s=>`
+    <div class="survey-card" onclick="openResults('${s.id}')">
+      <div class="card-top">
+        <div class="card-title" style="color:${s.color}">${s.title}</div>
+        <span class="badge ${s.status==='live'?'badge-live':'badge-closed'}">${s.status}</span>
+      </div>
+      <div class="card-desc">${s.desc||''}</div>
+      <div class="card-meta">
+        <span>❓ ${s.questions.length}</span>
+        <span>💬 ${s.responses.length} resp</span>
+        <span style="margin-left:auto;font-size:.72rem;opacity:.6">${s.category}</span>
+      </div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="card-btn" onclick="copyLink('${s.id}')">🔗 Link</button>
+        <button class="card-btn" onclick="openResults('${s.id}')">👁 Results</button>
+        <button class="card-btn" onclick="editSurvey('${s.id}')">✏️ Edit</button>
+        <button class="card-btn" onclick="fillSurvey('${s.id}')">📝 Fill</button>
+        <button class="card-btn danger" onclick="deleteSurvey('${s.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function filterSurveys(v){ renderSurveys(v); }
+
+// ════════════════════════════════════════════════════
+//  RESULTS
+// ════════════════════════════════════════════════════
+function openResults(id) {
+  const s=state.surveys.find(x=>x.id===id); if(!s)return;
+  currentSurveyId=id;
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-results').classList.add('active');
+  document.getElementById('topbarTitle').textContent=s.title;
+  document.getElementById('topbarSub').textContent=`${s.responses.length} responses`;
+  document.getElementById('topbarActions').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="nav('surveys',null);document.querySelectorAll('.nav-item')[0].classList.add('active')">← Back</button>
+    <button class="btn btn-ghost btn-sm" onclick="editSurvey('${id}')">✏️ Edit</button>
+    <button class="btn btn-primary btn-sm" onclick="fillSurvey('${id}')">＋ Add Response</button>`;
+  const n=s.responses.length;
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('resultsHeader').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Responses</div><div class="stat-value">${n}</div></div>
+    <div class="stat-card highlight"><div class="stat-label">Completion</div><div class="stat-value">${n?'94%':'—'}</div></div>
+    <div class="stat-card highlight"><div class="stat-label">Avg Time</div><div class="stat-value">${n?'3:12':'—'}</div></div>
+    <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value">${s.responses.filter(r=>r.ts&&r.ts.startsWith(today)).length}</div></div>`;
+  document.getElementById('resultsBody').innerHTML=s.questions.map((q,qi)=>renderQResult(s,q,qi)).join('');
+}
+
+function renderQResult(s,q,qi) {
+  const n=s.responses.length; if(!n) return '';
+  let body='';
+  if(q.type==='rating'){
+    const vals=s.responses.map(r=>r.data[q.id]).filter(v=>v!=null);
+    const a=vals.length?(vals.reduce((x,y)=>x+y,0)/vals.length).toFixed(1):0;
+    body=`<div class="rating-display">${a} <span>out of ${q.scale||5}</span></div><div class="stars">${'★'.repeat(Math.round(a))}${'☆'.repeat((q.scale||5)-Math.round(a))}</div>`;
+  } else if(q.type==='scale'){
+    const vals=s.responses.map(r=>r.data[q.id]).filter(v=>v!=null);
+    const a=vals.length?(vals.reduce((x,y)=>x+y,0)/vals.length).toFixed(1):0;
+    const pct=((a-(q.min||1))/((q.max||10)-(q.min||1)))*100;
+    body=`<div class="scale-display"><div class="scale-bar"><div class="scale-fill" style="width:${pct}%"></div></div><div class="scale-value">${a}</div><div class="scale-max">/ ${q.max||10}</div></div>`;
+  } else if(['multiple','checkbox','dropdown'].includes(q.type)){
+    const oc={};
+    s.responses.forEach(r=>{const v=r.data[q.id];if(!v)return;(Array.isArray(v)?v:[v]).forEach(o=>oc[o]=(oc[o]||0)+1);});
+    body=(q.options||[]).map(opt=>{const c=oc[opt]||0,pct=Math.round(c/n*100);return`<div class="bar-result"><div class="bar-label"><span>${opt}</span><span>${c} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;}).join('');
+  } else {
+    const texts=s.responses.map(r=>r.data[q.id]).filter(v=>v&&String(v).trim());
+    body=texts.length?texts.map(t=>`<div class="text-response">${t}</div>`).join(''):'<div style="color:var(--gray);font-size:.82rem">No text responses yet</div>';
+  }
+  return `<div class="q-result"><div class="q-result-header"><span class="q-label">Q${qi+1}</span><span class="q-text">${q.text}</span><span class="q-count">${n}</span></div>${body}</div>`;
+}
+
+// ════════════════════════════════════════════════════
+//  BUILDER
+// ════════════════════════════════════════════════════
+function openNewSurveyModal(){ document.getElementById('newTitle').value=''; document.getElementById('newDesc').value=''; openModal('modalNewSurvey'); }
+
+async function createSurvey(){
+  const title=document.getElementById('newTitle').value.trim();
+  if(!title){showToast('Please enter a title','error');return;}
+  const newS={id:'s'+Date.now(),title,desc:document.getElementById('newDesc').value.trim(),
+    category:document.getElementById('newCategory').value,status:'live',
+    color:COLORS[state.surveys.length%COLORS.length],
+    created:new Date().toISOString().split('T')[0],questions:[],responses:[]};
+  state.surveys.unshift(newS);
+  await saveSurveyToDB(newS);
+  closeModal('modalNewSurvey');
+  editSurvey(newS.id);
+}
+
+function editSurvey(id){
+  const s=state.surveys.find(x=>x.id===id); if(!s)return;
+  currentSurveyId=id;
+  editingQuestions=JSON.parse(JSON.stringify(s.questions));
+  currentColor=s.color;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-builder').classList.add('active');
+  document.getElementById('topbarTitle').textContent='Survey Builder';
+  document.getElementById('topbarSub').textContent=s.title;
+  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="openResults('${id}')">← Results</button>`;
+  document.getElementById('bTitle').value=s.title;
+  document.getElementById('bDesc').value=s.desc||'';
+  document.getElementById('bStatus').value=s.status;
+  document.getElementById('bCategory').value=s.category;
+  document.getElementById('shareLink').textContent=window.location.origin+'?survey='+id;
+  renderColorDots(); renderQuestions();
+}
+
+function renderColorDots(){ document.getElementById('colorDots').innerHTML=COLORS.map(c=>`<div class="color-dot ${c===currentColor?'active':''}" style="background:${c}" onclick="setColor('${c}')"></div>`).join('');}
+function setColor(c){ currentColor=c; renderColorDots(); }
+
+function renderQuestions(){
+  const list=document.getElementById('questionsList');
+  if(!editingQuestions.length){list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem">No questions yet — add one below ↓</div>';return;}
+  list.innerHTML=editingQuestions.map((q,i)=>buildQBlock(q,i)).join('');
+}
+
+function buildQBlock(q,i){
+  let extra='';
+  if(['multiple','checkbox','dropdown'].includes(q.type)){
+    const opts=(q.options||[]).map((o,oi)=>`<div class="option-row"><input class="option-input" value="${o}" onchange="editingQuestions[${i}].options[${oi}]=this.value"/><button onclick="removeOption(${i},${oi})" style="background:none;border:none;cursor:pointer;color:var(--gray)">✕</button></div>`).join('');
+    extra=`<div class="options-list">${opts}</div><button class="add-option-btn" onclick="addOption(${i})">＋ Add option</button>`;
+  } else if(q.type==='rating'){
+    extra=`<div style="font-size:.78rem;color:var(--gray);margin-top:.4rem">Scale: <select class="q-type-select" onchange="editingQuestions[${i}].scale=parseInt(this.value)"><option ${q.scale==5?'selected':''} value="5">5</option><option ${q.scale==10?'selected':''} value="10">10</option></select> stars</div>`;
+  } else if(q.type==='scale'){
+    extra=`<div style="display:flex;gap:.5rem;font-size:.78rem;color:var(--gray);margin-top:.4rem;align-items:center">Min:<input type="number" class="q-type-select" style="width:50px" value="${q.min||1}" onchange="editingQuestions[${i}].min=parseInt(this.value)"> Max:<input type="number" class="q-type-select" style="width:50px" value="${q.max||10}" onchange="editingQuestions[${i}].max=parseInt(this.value)"></div>`;
+  }
+  return `<div class="question-block">
+    <div class="q-header">
+      <div class="q-num">${i+1}</div>
+      <input class="q-input" value="${q.text}" placeholder="Enter question…" onchange="editingQuestions[${i}].text=this.value"/>
+      <select class="q-type-select" onchange="changeQType(${i},this.value)">
+        <option value="short" ${q.type==='short'?'selected':''}>Short Answer</option>
+        <option value="paragraph" ${q.type==='paragraph'?'selected':''}>Paragraph</option>
+        <option value="multiple" ${q.type==='multiple'?'selected':''}>Multiple Choice</option>
+        <option value="checkbox" ${q.type==='checkbox'?'selected':''}>Checkboxes</option>
+        <option value="dropdown" ${q.type==='dropdown'?'selected':''}>Dropdown</option>
+        <option value="rating" ${q.type==='rating'?'selected':''}>Rating</option>
+        <option value="scale" ${q.type==='scale'?'selected':''}>Scale</option>
+      </select>
+      <button class="q-delete" onclick="deleteQuestion(${i})">🗑</button>
+    </div>
+    ${extra}
+    <div class="q-required"><input type="checkbox" id="req-${i}" ${q.required?'checked':''} onchange="editingQuestions[${i}].required=this.checked"/><label for="req-${i}">Required</label></div>
+  </div>`;
+}
+
+function addQuestion(type){
+  const q={id:'q'+Date.now(),type,text:'',required:false};
+  if(['multiple','checkbox','dropdown'].includes(type)) q.options=['Option 1','Option 2'];
+  if(type==='rating') q.scale=5;
+  if(type==='scale'){q.min=1;q.max=10;}
+  editingQuestions.push(q); renderQuestions();
+}
+function deleteQuestion(i){ editingQuestions.splice(i,1); renderQuestions(); }
+function changeQType(i,type){
+  editingQuestions[i].type=type;
+  if(['multiple','checkbox','dropdown'].includes(type)&&!editingQuestions[i].options) editingQuestions[i].options=['Option 1','Option 2'];
+  if(type==='rating'&&!editingQuestions[i].scale) editingQuestions[i].scale=5;
+  if(type==='scale'){editingQuestions[i].min=1;editingQuestions[i].max=10;}
+  renderQuestions();
+}
+function addOption(i){ editingQuestions[i].options.push('Option '+(editingQuestions[i].options.length+1)); renderQuestions(); }
+function removeOption(i,oi){ editingQuestions[i].options.splice(oi,1); renderQuestions(); }
+
+async function saveSurvey(){
+  const s=state.surveys.find(x=>x.id===currentSurveyId); if(!s)return;
+  s.title=document.getElementById('bTitle').value||s.title;
+  s.desc=document.getElementById('bDesc').value;
+  s.status=document.getElementById('bStatus').value;
+  s.category=document.getElementById('bCategory').value;
+  s.color=currentColor;
+  s.questions=JSON.parse(JSON.stringify(editingQuestions));
+  await saveSurveyToDB(s);
+  showToast('Survey saved!','success');
+}
+
+function previewSurvey(){
+  const s=state.surveys.find(x=>x.id===currentSurveyId); if(!s)return;
+  document.getElementById('previewContent').innerHTML=buildFillForm(s,true);
+  openModal('modalPreview');
+}
+
+// ════════════════════════════════════════════════════
+//  FILL FORM
+// ════════════════════════════════════════════════════
+function fillSurvey(id){
+  const s=state.surveys.find(x=>x.id===id); if(!s)return;
+  document.getElementById('fillTitle').textContent=s.title;
+  document.getElementById('fillContent').innerHTML=buildFillForm(s,false,id);
+  openModal('modalFill');
+}
+
+function buildFillForm(s,preview=false,sid=''){
+  const fields=s.questions.map((q,i)=>{
+    let input='';
+    if(q.type==='short') input=`<input class="form-input" id="ff-${q.id}" placeholder="Your answer…"/>`;
+    else if(q.type==='paragraph') input=`<textarea class="form-textarea" id="ff-${q.id}" placeholder="Your answer…"></textarea>`;
+    else if(q.type==='multiple') input=`<div>${(q.options||[]).map(o=>`<label style="display:flex;align-items:center;gap:.5rem;margin:.3rem 0;font-size:.85rem;cursor:pointer"><input type="radio" name="ff-${q.id}" value="${o}" style="accent-color:var(--blue)"> ${o}</label>`).join('')}</div>`;
+    else if(q.type==='checkbox') input=`<div>${(q.options||[]).map(o=>`<label style="display:flex;align-items:center;gap:.5rem;margin:.3rem 0;font-size:.85rem;cursor:pointer"><input type="checkbox" name="ff-${q.id}" value="${o}" style="accent-color:var(--blue)"> ${o}</label>`).join('')}</div>`;
+    else if(q.type==='dropdown') input=`<select class="form-select" id="ff-${q.id}"><option value="">Select…</option>${(q.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`;
+    else if(q.type==='rating') input=`<div style="display:flex;gap:.5rem">${Array.from({length:q.scale||5},(_,k)=>`<label style="cursor:pointer;font-size:1.6rem;color:#d1d5db" onmouseover="hoverStar(this,${k+1},'ff-${q.id}')" onclick="clickStar('ff-${q.id}',${k+1})">★</label>`).join('')}<input type="hidden" id="ff-${q.id}" value=""/></div>`;
+    else if(q.type==='scale') input=`<div><input type="range" id="ff-${q.id}" min="${q.min||1}" max="${q.max||10}" value="${Math.round(((q.max||10)+(q.min||1))/2)}" style="width:100%;accent-color:var(--blue)" oninput="document.getElementById('sv-${q.id}').textContent=this.value"/><div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--gray);margin-top:.3rem"><span>Not confident</span><span id="sv-${q.id}">${Math.round(((q.max||10)+(q.min||1))/2)}</span><span>Completely confident</span></div></div>`;
+    return `<div style="margin-bottom:1.1rem"><div style="font-weight:600;font-size:.875rem;margin-bottom:.5rem">${i+1}. ${q.text}${q.required?'<span style="color:var(--danger)">*</span>':''}</div>${input}</div>`;
+  }).join('');
+  const btn=preview?'':`<button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="submitFill('${sid}')">Submit Response →</button>`;
+  return `<div style="padding:.5rem 0">${fields}${btn}</div>`;
+}
+
+function hoverStar(el,val,id){[...el.parentElement.querySelectorAll('label')].forEach((s,i)=>s.style.color=i<val?'var(--gold)':'#d1d5db');}
+function clickStar(id,val){document.getElementById(id).value=val;const w=document.getElementById(id).closest('div');[...w.querySelectorAll('label')].forEach((s,i)=>s.style.color=i<val?'var(--gold)':'#d1d5db');}
+
+async function submitFill(sid){
+  const s=state.surveys.find(x=>x.id===sid); if(!s)return;
+  const data={};
+  s.questions.forEach(q=>{
+    if(['short','paragraph','dropdown'].includes(q.type)){const el=document.getElementById('ff-'+q.id);if(el)data[q.id]=el.value;}
+    else if(['rating','scale'].includes(q.type)){const el=document.getElementById('ff-'+q.id);if(el)data[q.id]=parseFloat(el.value)||0;}
+    else if(q.type==='multiple'){const sel=document.querySelector(`input[name="ff-${q.id}"]:checked`);data[q.id]=sel?sel.value:'';}
+    else if(q.type==='checkbox'){data[q.id]=[...document.querySelectorAll(`input[name="ff-${q.id}"]:checked`)].map(e=>e.value);}
+  });
+  const resp={id:'r'+Date.now(),ts:new Date().toISOString().replace('T',' ').slice(0,16),data};
+  try {
+    await saveResponseToDB(sid, resp);
+    s.responses.unshift(resp);
+    closeModal('modalFill');
+    showToast('Response submitted! Thank you.','success');
+    if(document.getElementById('panel-results').classList.contains('active')) openResults(sid);
+    renderSurveys();
+  } catch(e) { showToast('Submit failed: '+e.message,'error'); }
+}
+
+// ════════════════════════════════════════════════════
+//  ANALYTICS
+// ════════════════════════════════════════════════════
+function renderAnalytics(){
+  const total=state.surveys.reduce((a,s)=>a+s.responses.length,0);
+  const active=state.surveys.filter(s=>s.status==='live').length;
+  const allR=state.surveys.flatMap(s=>s.questions.filter(q=>q.type==='rating').flatMap(q=>s.responses.map(r=>r.data[q.id]).filter(v=>v)));
+  const avgR=allR.length?(allR.reduce((a,b)=>a+b,0)/allR.length).toFixed(1):0;
+  document.getElementById('analyticsKpis').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Responses</div><div class="stat-value" style="color:var(--blue)">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Active Surveys</div><div class="stat-value" style="color:var(--teal)">${active}</div></div>
+    <div class="stat-card highlight"><div class="stat-label">Avg Rating</div><div class="stat-value">${avgR} ★</div></div>
+    <div class="stat-card"><div class="stat-label">NPS</div><div class="stat-value" style="color:var(--gold)">${total?'6.8':'—'}</div></div>`;
+  const recent=state.surveys.flatMap(s=>s.responses.map(r=>({survey:s.title,ts:r.ts,color:s.color,hl:getHL(r.data)}))).sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,12);
+  document.getElementById('recentBody').innerHTML=recent.map(r=>`<tr><td><span class="dot-live" style="background:${r.color};box-shadow:0 0 5px ${r.color}"></span></td><td style="font-weight:500">${r.survey}</td><td style="color:var(--gray)">${r.ts}</td><td>${r.hl||'—'}</td></tr>`).join('');
+}
+
+function getHL(data){
+  for(const v of Object.values(data)){
+    if(typeof v==='string'&&v.length>2) return v.length>45?v.slice(0,45)+'…':v;
+    if(Array.isArray(v)&&v.length) return v[0];
+  }
+  return '';
+}
+
+// ════════════════════════════════════════════════════
+//  TEAM
+// ════════════════════════════════════════════════════
+function renderTeam(){
+  document.getElementById('membersList').innerHTML=state.team.map(m=>`
+    <div class="member-row">
+      <div class="member-avatar" style="background:${m.color}">${m.initials}</div>
+      <div class="member-info"><div class="member-name">${m.name}</div><div class="member-email">${m.email}</div></div>
+      <span class="role-badge role-${m.role}">${m.role}</span>
+      ${m.role!=='owner'?`<button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="removeMember('${m.id}')">Remove</button>`:''}
+    </div>`).join('');
+}
+
+function openInviteModal(){ document.getElementById('inviteName').value=''; document.getElementById('inviteEmail').value=''; openModal('modalInvite'); }
+
+async function inviteMember(){
+  const name=document.getElementById('inviteName').value.trim();
+  const email=document.getElementById('inviteEmail').value.trim();
+  const role=document.getElementById('inviteRole').value;
+  if(!name||!email){showToast('Please fill in all fields','error');return;}
+  const initials=name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  const colorArr=['#1d5fa6','#0c8a73','#f0a500','#6c4fd8','#e53e3e','#3db4d0'];
+  const m={id:'t'+Date.now(),name,email,role,initials,color:colorArr[state.team.length%colorArr.length]};
+  state.team.push(m);
+  await saveTeamMemberToDB(m);
+  closeModal('modalInvite'); renderTeam();
+  showToast(`Invite sent to ${name}`,'success');
+}
+
+async function removeMember(id){
+  state.team=state.team.filter(m=>m.id!==id);
+  await deleteTeamMemberFromDB(id);
+  renderTeam();
+}
+
+// ════════════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════════════
+function saveSettings(){
+  showToast('Settings saved','success');
+}
+
+async function updateDbSettings(){
+  const url=document.getElementById('settingsSbUrl').value.trim();
+  const key=document.getElementById('settingsSbKey').value.trim();
+  const pass=document.getElementById('settingsPasscode').value.trim();
+  if(url) SB_URL=url;
+  if(key) SB_KEY=key;
+  if(pass) PASSCODE=pass;
+  if(url) localStorage.setItem('sb_url',url);
+  if(key) localStorage.setItem('sb_key',key);
+  if(pass) localStorage.setItem('sb_pass',pass);
+  const ok=await testConnection();
+  if(ok){await loadAllData();renderSurveys();showToast('Database updated','success');}
+  else showToast('Connection failed','error');
+}
+
+async function confirmDeleteResponses(){
+  if(!confirm('Delete ALL responses from ALL surveys?')) return;
+  if(DB_MODE==='supabase'){
+    try { await sbDelete('responses','survey_id=neq.none'); } catch(e){}
+  }
+  state.surveys.forEach(s=>s.responses=[]);
+  saveLocal(); renderSurveys();
+  showToast('All responses deleted','info');
+}
+
+function confirmDeleteWorkspace(){
+  if(!confirm('Reset the entire workspace? All data will be lost.')) return;
+  localStorage.clear();
+  location.reload();
+}
+
+async function deleteSurvey(id){
+  if(!confirm('Delete this survey and all its responses?')) return;
+  state.surveys=state.surveys.filter(s=>s.id!==id);
+  await deleteSurveyFromDB(id);
+  renderSurveys();
+}
+
+function copyLink(id){
+  const url=`${window.location.href.split('?')[0]}?survey=${id}`;
+  navigator.clipboard.writeText(url).then(()=>showToast('Link copied!','success'));
+}
+
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ════════════════════════════════════════════════════
+//  INITIALISE
+// ════════════════════════════════════════════════════
+function initUI(){
+  document.getElementById('userNameSidebar').textContent=
+    (state.team.find(m=>m.role==='owner')?.name||'User').split(' ').map((n,i,a)=>i===0||i===a.length-1?n[0]+(i===0?n.slice(1):'.'):null).filter(Boolean).join(' ');
+  renderSurveys();
+}
+
+async function boot(){
+  // Prefer hardcoded credentials; fall back to localStorage
+  const storedUrl = localStorage.getItem('sb_url');
+  const storedKey = localStorage.getItem('sb_key');
+  const storedPass = localStorage.getItem('sb_pass');
+  if(storedUrl && storedUrl !== 'YOUR_SUPABASE_URL') SB_URL = storedUrl;
+  if(storedKey && storedKey !== 'YOUR_SUPABASE_ANON_KEY') SB_KEY = storedKey;
+  if(storedPass) PASSCODE = storedPass;
+
+  const isHardcoded = SB_URL !== 'YOUR_SUPABASE_URL' && SB_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+
+  if(!isHardcoded && !storedUrl){
+    // No credentials at all — show setup
+    document.getElementById('sbOverlay').classList.remove('hidden');
+    return;
+  }
+
+  // We have credentials — hide setup, show passcode gate
+  document.getElementById('sbOverlay').classList.add('hidden');
+  document.getElementById('gateOverlay').classList.remove('hidden');
+
+  // Test connection in background
+  const ok = await testConnection();
+  if(ok){ await loadAllData(); }
+  else {
+    const saved = JSON.parse(localStorage.getItem('ncwsc_local')||'null');
+    if(saved){ state.surveys=saved.surveys||[]; state.team=saved.team||state.team; }
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
