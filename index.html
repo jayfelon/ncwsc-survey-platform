@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NCWSC Customer Feedback Survey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --navy:#0a1628;--blue:#1a4a8a;--teal:#0e7c7b;--gold:#e8a92d;
+    --water:#4db8d4;--light:#f0f6ff;--white:#fff;--gray:#6b7a8d;
+    --border:#d0dce8;--success:#2ecc71;--danger:#e74c3c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--navy);min-height:100vh;}
+
+  /* ── NAV ── */
+  nav{background:var(--navy);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3);}
+  .nav-logo{font-family:'DM Serif Display',serif;color:var(--white);font-size:1.25rem;}
+  .nav-logo span{color:var(--water);}
+  .nav-tabs{display:flex;gap:.25rem;}
+  .nav-tab{background:none;border:none;color:rgba(255,255,255,.6);padding:.5rem 1.25rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;cursor:pointer;transition:all .2s;}
+  .nav-tab:hover{color:#fff;background:rgba(255,255,255,.1);}
+  .nav-tab.active{color:var(--navy);background:var(--water);}
+  .nav-count{background:var(--gold);color:var(--navy);font-size:.75rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;margin-left:.25rem;}
+  .db-status{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:rgba(255,255,255,.5);}
+  .dot{width:8px;height:8px;border-radius:50%;background:#555;}
+  .dot.connected{background:var(--success);box-shadow:0 0 6px var(--success);}
+  .dot.error{background:var(--danger);}
+
+  .page{display:none;} .page.active{display:block;}
+
+  /* ── PASSCODE GATE ── */
+  .gate-overlay{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,#0d2545 100%);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;}
+  .gate-overlay.hidden{display:none;}
+  .gate-card{background:white;border-radius:20px;padding:2.5rem;max-width:380px;width:100%;text-align:center;box-shadow:0 40px 100px rgba(0,0,0,.5);}
+  .gate-icon{font-size:2.5rem;margin-bottom:1rem;}
+  .gate-card h2{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--navy);margin-bottom:.4rem;}
+  .gate-card p{color:var(--gray);font-size:.875rem;margin-bottom:1.5rem;}
+  .gate-input{width:100%;padding:.8rem 1rem;border:2px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:1.1rem;text-align:center;letter-spacing:.3em;color:var(--navy);background:var(--light);transition:border-color .2s;}
+  .gate-input:focus{outline:none;border-color:var(--water);}
+  .gate-input.shake{animation:shake .4s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
+  .gate-btn{width:100%;padding:.85rem;margin-top:1rem;background:linear-gradient(135deg,var(--blue),var(--teal));color:white;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .2s;}
+  .gate-btn:hover{opacity:.9;}
+  .gate-error{color:var(--danger);font-size:.8rem;margin-top:.6rem;height:1rem;}
+  .gate-hint{color:var(--gray);font-size:.75rem;margin-top:1rem;}
+
+  /* ── SURVEY ── */
+  .survey-wrap{max-width:780px;margin:2.5rem auto;padding:0 1.5rem 4rem;}
+  .survey-header{text-align:center;margin-bottom:2.5rem;padding:2.5rem;background:var(--navy);border-radius:16px;color:white;position:relative;overflow:hidden;}
+  .survey-header::before{content:'';position:absolute;top:-50%;left:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(77,184,212,.25) 0%,transparent 70%);}
+  .survey-header h1{font-family:'DM Serif Display',serif;font-size:2rem;margin-bottom:.5rem;position:relative;}
+  .survey-header p{color:rgba(255,255,255,.7);font-size:.95rem;position:relative;}
+  .progress-bar-wrap{margin:1.5rem 0 0;}
+  .progress-bar-bg{background:rgba(255,255,255,.2);height:6px;border-radius:3px;}
+  .progress-bar-fill{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--water),var(--gold));transition:width .5s ease;width:0%;}
+  .progress-label{color:rgba(255,255,255,.6);font-size:.8rem;margin-top:.5rem;}
+  .section-card{background:white;border-radius:14px;padding:2rem;margin-bottom:1.5rem;box-shadow:0 2px 16px rgba(10,22,40,.07);border:1px solid var(--border);}
+  .section-title{font-family:'DM Serif Display',serif;font-size:1.25rem;color:var(--blue);display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid var(--light);}
+  .section-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+  .question{margin-bottom:1.5rem;} .question:last-child{margin-bottom:0;}
+  .question label{display:block;font-weight:500;font-size:.9rem;color:var(--navy);margin-bottom:.75rem;}
+  .req{color:var(--danger);margin-left:3px;}
+  .star-rating{display:flex;gap:.5rem;flex-direction:row-reverse;}
+  .star-rating input{display:none;}
+  .star-rating label{font-size:1.8rem;cursor:pointer;color:#d0d8e4;transition:color .15s,transform .15s;margin:0;}
+  .star-rating label:hover,.star-rating label:hover~label,.star-rating input:checked~label{color:var(--gold);}
+  .star-rating label:hover,.star-rating label:hover~label{transform:scale(1.15);}
+  .pill-group{display:flex;flex-wrap:wrap;gap:.5rem;}
+  .pill-group input{display:none;}
+  .pill-group label{padding:.45rem 1rem;border-radius:50px;border:1.5px solid var(--border);font-size:.85rem;cursor:pointer;color:var(--gray);background:var(--light);margin:0;transition:all .18s;}
+  .pill-group input:checked+label{background:var(--blue);border-color:var(--blue);color:white;font-weight:600;}
+  .pill-group label:hover{border-color:var(--water);color:var(--blue);}
+  textarea.open-ended{width:100%;padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--navy);resize:vertical;min-height:100px;background:var(--light);transition:border-color .2s;}
+  textarea.open-ended:focus{outline:none;border-color:var(--water);}
+  .demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+  select.field,input.field{width:100%;padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--navy);background:var(--light);appearance:none;transition:border-color .2s;}
+  select.field:focus,input.field:focus{outline:none;border-color:var(--water);}
+  .submit-btn{width:100%;padding:1rem;background:linear-gradient(135deg,var(--blue),var(--teal));color:white;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;letter-spacing:.5px;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 15px rgba(26,74,138,.35);display:flex;align-items:center;justify-content:center;gap:.5rem;}
+  .submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(26,74,138,.4);}
+  .submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:2rem;right:2rem;padding:1rem 1.5rem;border-radius:12px;font-weight:500;box-shadow:0 8px 30px rgba(0,0,0,.2);transform:translateY(100px);opacity:0;transition:all .4s cubic-bezier(.175,.885,.32,1.275);z-index:999;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.success{background:var(--teal);color:white;}
+  .toast.error{background:var(--danger);color:white;}
+
+  /* ── DASHBOARD ── */
+  .dash-wrap{max-width:1300px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+  .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+  .dash-title{font-family:'DM Serif Display',serif;font-size:1.75rem;color:var(--navy);}
+  .dash-sub{color:var(--gray);font-size:.9rem;margin-top:.25rem;}
+  .dash-actions{display:flex;gap:.5rem;}
+  .refresh-btn{background:var(--blue);color:white;border:none;padding:.5rem 1.25rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:opacity .2s;}
+  .refresh-btn:hover{opacity:.85;}
+  .clear-btn{background:var(--danger);color:white;border:none;padding:.5rem 1.25rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:opacity .2s;}
+  .clear-btn:hover{opacity:.85;}
+  .lock-btn{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.2);padding:.5rem 1.25rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;}
+  .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem;}
+  .kpi-card{background:white;border-radius:14px;padding:1.25rem 1.5rem;box-shadow:0 2px 12px rgba(10,22,40,.07);border:1px solid var(--border);position:relative;overflow:hidden;}
+  .kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--water),var(--teal));}
+  .kpi-label{font-size:.8rem;color:var(--gray);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+  .kpi-value{font-family:'DM Serif Display',serif;font-size:2.25rem;color:var(--navy);margin:.25rem 0;}
+  .kpi-badge{font-size:.75rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;}
+  .badge-green{background:#e8f8f0;color:var(--teal);}
+  .badge-gold{background:#fef7e7;color:#b7791f;}
+  .charts-section{margin-bottom:2rem;}
+  .section-heading{font-family:'DM Serif Display',serif;font-size:1.15rem;color:var(--blue);display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;padding-left:1rem;border-left:4px solid var(--water);}
+  .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;}
+  .charts-grid.three{grid-template-columns:repeat(3,1fr);}
+  .chart-card{background:white;border-radius:14px;padding:1.5rem;box-shadow:0 2px 12px rgba(10,22,40,.07);border:1px solid var(--border);}
+  .chart-card h3{font-size:.9rem;font-weight:600;color:var(--navy);margin-bottom:1rem;}
+  .chart-canvas-wrap{position:relative;height:220px;}
+  .nps-wrap{text-align:center;}
+  .nps-score{font-family:'DM Serif Display',serif;font-size:2.5rem;}
+  .nps-label{font-size:.8rem;color:var(--gray);}
+  .gauge-wrap{display:flex;flex-direction:column;align-items:center;}
+  .gauge-svg{width:180px;height:110px;}
+  .word-cloud{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.5rem 0;min-height:120px;}
+  .word{cursor:default;font-weight:600;}
+  .data-table{width:100%;border-collapse:collapse;font-size:.875rem;}
+  .data-table th{background:var(--navy);color:white;padding:.6rem 1rem;text-align:left;font-weight:500;}
+  .data-table td{padding:.55rem 1rem;border-bottom:1px solid var(--border);}
+  .data-table tr:hover td{background:var(--light);}
+  .no-data{text-align:center;padding:3rem;color:var(--gray);font-size:.95rem;}
+  .no-data .icon{font-size:2.5rem;margin-bottom:.75rem;}
+
+  .export-csv-btn{background:var(--teal);color:white;border:none;padding:.5rem 1.25rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;}
+  .export-csv-btn:hover{background:#0a5f5f;transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,124,123,.4);}
+  .export-pdf-btn{background:var(--blue);color:white;border:none;padding:.5rem 1.25rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;}
+  .export-pdf-btn:hover{background:#133870;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,74,138,.4);}
+  .export-csv-btn:disabled,.export-pdf-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
+  @media print{nav,.dash-actions,#page-survey{display:none!important;}body{background:white;}.chart-card,.kpi-strip,.charts-section{break-inside:avoid;}}
+  @media(max-width:768px){
+    .kpi-strip{grid-template-columns:repeat(2,1fr);}
+    .charts-grid,.charts-grid.three{grid-template-columns:1fr;}
+    .demo-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ CLEAR DATA CONFIRMATION MODAL ══ -->
+<div class="gate-overlay hidden" id="clearOverlay">
+  <div class="gate-card">
+    <div class="gate-icon">🗑️</div>
+    <h2>Delete All Data?</h2>
+    <p>This will permanently delete <strong>all survey responses</strong> from the database. This action cannot be undone.</p>
+    <p style="margin-top:.75rem;color:var(--danger);font-size:.85rem;font-weight:600;">Enter your passcode to confirm:</p>
+    <input class="gate-input" id="clearInput" type="password" maxlength="20"
+      placeholder="••••••••" onkeydown="if(event.key==='Enter')confirmClear();if(event.key==='Escape')cancelClear()"/>
+    <button class="gate-btn" style="background:linear-gradient(135deg,var(--danger),#c0392b)" onclick="confirmClear()">🗑 Yes, Delete Everything</button>
+    <button class="gate-btn" style="background:#555;margin-top:.5rem" onclick="cancelClear()">Cancel</button>
+    <div class="gate-error" id="clearError"></div>
+  </div>
+</div>
+
+
+<div class="gate-overlay hidden" id="gateOverlay">
+  <div class="gate-card">
+    <div class="gate-icon">🔐</div>
+    <h2>Admin Dashboard</h2>
+    <p>Enter your passcode to access the NCWSC analytics dashboard</p>
+    <input class="gate-input" id="gateInput" type="password" maxlength="20"
+      placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPasscode()"/>
+    <button class="gate-btn" onclick="checkPasscode()">Unlock Dashboard →</button>
+    <div class="gate-error" id="gateError"></div>
+    <div class="gate-hint">Contact your NCWSC administrator for access</div>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-logo">NCWSC <span>Feedback</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tabSurvey" onclick="goSurvey()">📝 Survey</button>
+    <button class="nav-tab" id="tabDash" onclick="goDashboard()">📊 Dashboard <span class="nav-count" id="responseCount">—</span></button>
+  </div>
+  <div class="db-status">
+    <div class="dot" id="dbDot"></div>
+    <span id="dbStatusText">Connecting…</span>
+  </div>
+</nav>
+
+<!-- ══ SURVEY PAGE ══ -->
+<div id="page-survey" class="page active">
+<div class="survey-wrap">
+  <div class="survey-header">
+    <h1>Customer Experience Survey</h1>
+    <p>Nairobi City Water &amp; Sewerage Company — Your feedback shapes better service</p>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 of 15 questions answered</div>
+    </div>
+  </div>
+
+  <form id="surveyForm">
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#e8f4ff">👤</div>Customer Information</div>
+      <div class="demo-grid">
+        <div>
+          <label style="font-weight:500;font-size:.9rem;display:block;margin-bottom:.4rem">Customer Type</label>
+          <select class="field" name="customer_type" required>
+            <option value="">Select type…</option><option>Domestic</option><option>Commercial</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-weight:500;font-size:.9rem;display:block;margin-bottom:.4rem">Region</label>
+          <select class="field" name="region" required>
+            <option value="">Select region…</option>
+            <option>Westlands</option><option>Roysambu</option><option>Dagoretti</option>
+            <option>Lower Embakasi</option><option>Upper Embakasi</option><option>Kasarani</option>
+            <option>Central</option><option>Informal</option><option>Langata</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#e0f7f7">💧</div>Section 1: Service Reliability</div>
+      <div class="question">
+        <label>How satisfied are you with the reliability of your water supply?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="reliability" value="5" id="r5"><label for="r5">★</label>
+          <input type="radio" name="reliability" value="4" id="r4"><label for="r4">★</label>
+          <input type="radio" name="reliability" value="3" id="r3"><label for="r3">★</label>
+          <input type="radio" name="reliability" value="2" id="r2"><label for="r2">★</label>
+          <input type="radio" name="reliability" value="1" id="r1"><label for="r1">★</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>In the past 6 months, how often have you experienced service interruptions?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="interruptions" value="Never" id="i1"><label for="i1">Never</label>
+          <input type="radio" name="interruptions" value="Rarely" id="i2"><label for="i2">Rarely</label>
+          <input type="radio" name="interruptions" value="Sometimes" id="i3"><label for="i3">Sometimes</label>
+          <input type="radio" name="interruptions" value="Often" id="i4"><label for="i4">Often</label>
+          <input type="radio" name="interruptions" value="Very Often" id="i5"><label for="i5">Very Often</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>How quickly are issues resolved when reported?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="resolution_speed" value="Very Quickly" id="rs1"><label for="rs1">Very Quickly</label>
+          <input type="radio" name="resolution_speed" value="Quickly" id="rs2"><label for="rs2">Quickly</label>
+          <input type="radio" name="resolution_speed" value="Neutral" id="rs3"><label for="rs3">Neutral</label>
+          <input type="radio" name="resolution_speed" value="Slowly" id="rs4"><label for="rs4">Slowly</label>
+          <input type="radio" name="resolution_speed" value="Very Slowly" id="rs5"><label for="rs5">Very Slowly</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#e8f0ff">🔬</div>Section 2: Water Quality</div>
+      <div class="question">
+        <label>How would you rate the quality of water provided?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="water_quality" value="5" id="wq5"><label for="wq5">Excellent</label>
+          <input type="radio" name="water_quality" value="4" id="wq4"><label for="wq4">Good</label>
+          <input type="radio" name="water_quality" value="3" id="wq3"><label for="wq3">Fair</label>
+          <input type="radio" name="water_quality" value="2" id="wq2"><label for="wq2">Poor</label>
+          <input type="radio" name="water_quality" value="1" id="wq1"><label for="wq1">Very Poor</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>Do you feel confident the water meets health &amp; safety standards?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="safety_confidence" value="5" id="sc5"><label for="sc5">★</label>
+          <input type="radio" name="safety_confidence" value="4" id="sc4"><label for="sc4">★</label>
+          <input type="radio" name="safety_confidence" value="3" id="sc3"><label for="sc3">★</label>
+          <input type="radio" name="safety_confidence" value="2" id="sc2"><label for="sc2">★</label>
+          <input type="radio" name="safety_confidence" value="1" id="sc1"><label for="sc1">★</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#fff8e7">💳</div>Section 3: Billing &amp; Payments</div>
+      <div class="question">
+        <label>Are your bills accurate and easy to understand?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="billing_accuracy" value="5" id="ba5"><label for="ba5">★</label>
+          <input type="radio" name="billing_accuracy" value="4" id="ba4"><label for="ba4">★</label>
+          <input type="radio" name="billing_accuracy" value="3" id="ba3"><label for="ba3">★</label>
+          <input type="radio" name="billing_accuracy" value="2" id="ba2"><label for="ba2">★</label>
+          <input type="radio" name="billing_accuracy" value="1" id="ba1"><label for="ba1">★</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>How satisfied are you with the payment options available?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="payment_options" value="5" id="po5"><label for="po5">Very Satisfied</label>
+          <input type="radio" name="payment_options" value="4" id="po4"><label for="po4">Satisfied</label>
+          <input type="radio" name="payment_options" value="3" id="po3"><label for="po3">Neutral</label>
+          <input type="radio" name="payment_options" value="2" id="po2"><label for="po2">Dissatisfied</label>
+          <input type="radio" name="payment_options" value="1" id="po1"><label for="po1">Very Dissatisfied</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>Do you believe the charges are fair and reasonable?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="charges_fair" value="5" id="cf5"><label for="cf5">★</label>
+          <input type="radio" name="charges_fair" value="4" id="cf4"><label for="cf4">★</label>
+          <input type="radio" name="charges_fair" value="3" id="cf3"><label for="cf3">★</label>
+          <input type="radio" name="charges_fair" value="2" id="cf2"><label for="cf2">★</label>
+          <input type="radio" name="charges_fair" value="1" id="cf1"><label for="cf1">★</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#f0ffe8">📡</div>Section 4: Communication &amp; Responsiveness</div>
+      <div class="question">
+        <label>How effectively does NCWSC communicate about disruptions?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="communication" value="5" id="c5"><label for="c5">Very Effectively</label>
+          <input type="radio" name="communication" value="4" id="c4"><label for="c4">Effectively</label>
+          <input type="radio" name="communication" value="3" id="c3"><label for="c3">Neutral</label>
+          <input type="radio" name="communication" value="2" id="c2"><label for="c2">Ineffectively</label>
+          <input type="radio" name="communication" value="1" id="c1"><label for="c1">Very Ineffectively</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>How satisfied are you with the responsiveness of customer service?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="responsiveness" value="5" id="re5"><label for="re5">★</label>
+          <input type="radio" name="responsiveness" value="4" id="re4"><label for="re4">★</label>
+          <input type="radio" name="responsiveness" value="3" id="re3"><label for="re3">★</label>
+          <input type="radio" name="responsiveness" value="2" id="re2"><label for="re2">★</label>
+          <input type="radio" name="responsiveness" value="1" id="re1"><label for="re1">★</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>Do you find it easy to access your account information online?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="online_access" value="5" id="oa5"><label for="oa5">★</label>
+          <input type="radio" name="online_access" value="4" id="oa4"><label for="oa4">★</label>
+          <input type="radio" name="online_access" value="3" id="oa3"><label for="oa3">★</label>
+          <input type="radio" name="online_access" value="2" id="oa2"><label for="oa2">★</label>
+          <input type="radio" name="online_access" value="1" id="oa1"><label for="oa1">★</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#f8eaff">🤝</div>Section 5: Customer Support</div>
+      <div class="question">
+        <label>How would you rate the courtesy and professionalism of staff?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="professionalism" value="5" id="pr5"><label for="pr5">Excellent</label>
+          <input type="radio" name="professionalism" value="4" id="pr4"><label for="pr4">Good</label>
+          <input type="radio" name="professionalism" value="3" id="pr3"><label for="pr3">Fair</label>
+          <input type="radio" name="professionalism" value="2" id="pr2"><label for="pr2">Poor</label>
+          <input type="radio" name="professionalism" value="1" id="pr1"><label for="pr1">Very Poor</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>Were your concerns addressed in a timely and helpful manner?<span class="req">*</span></label>
+        <div class="star-rating">
+          <input type="radio" name="issue_resolution" value="5" id="ir5"><label for="ir5">★</label>
+          <input type="radio" name="issue_resolution" value="4" id="ir4"><label for="ir4">★</label>
+          <input type="radio" name="issue_resolution" value="3" id="ir3"><label for="ir3">★</label>
+          <input type="radio" name="issue_resolution" value="2" id="ir2"><label for="ir2">★</label>
+          <input type="radio" name="issue_resolution" value="1" id="ir1"><label for="ir1">★</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><div class="section-icon" style="background:#fff0e8">🌟</div>Section 6: Overall Satisfaction</div>
+      <div class="question">
+        <label>Overall, how satisfied are you with the utility services?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="overall" value="5" id="ov5"><label for="ov5">Very Satisfied</label>
+          <input type="radio" name="overall" value="4" id="ov4"><label for="ov4">Satisfied</label>
+          <input type="radio" name="overall" value="3" id="ov3"><label for="ov3">Neutral</label>
+          <input type="radio" name="overall" value="2" id="ov2"><label for="ov2">Dissatisfied</label>
+          <input type="radio" name="overall" value="1" id="ov1"><label for="ov1">Very Dissatisfied</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>Would you recommend NCWSC to others?<span class="req">*</span></label>
+        <div class="pill-group">
+          <input type="radio" name="nps" value="Promoter" id="np1"><label for="np1">Definitely</label>
+          <input type="radio" name="nps" value="Promoter" id="np2"><label for="np2">Probably</label>
+          <input type="radio" name="nps" value="Passive" id="np3"><label for="np3">Not Sure</label>
+          <input type="radio" name="nps" value="Detractor" id="np4"><label for="np4">Probably Not</label>
+          <input type="radio" name="nps" value="Detractor" id="np5"><label for="np5">Definitely Not</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>What improvements would you like to see?</label>
+        <textarea class="open-ended" name="suggestions" placeholder="Share your thoughts…" rows="4"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">
+      <span id="submitText">Submit My Feedback →</span>
+      <div class="spinner" id="submitSpinner" style="display:none"></div>
+    </button>
+  </form>
+</div>
+</div>
+
+<!-- ══ DASHBOARD PAGE ══ -->
+<div id="page-dashboard" class="page">
+<div class="dash-wrap">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">NCWSC Experience Dashboard</div>
+      <div class="dash-sub" id="lastUpdated">Loading data…</div>
+    </div>
+    <div class="dash-actions">
+      <button class="export-csv-btn" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="export-pdf-btn" id="pdfBtn" onclick="exportPDF()">📄 Export PDF</button>
+      <button class="refresh-btn" onclick="loadAndRender()">↻ Refresh</button>
+      <button class="clear-btn" onclick="clearAllData()">🗑 Clear Data</button>
+      <button class="clear-btn" style="background:#555" onclick="lockDashboard()">🔒 Lock</button>
+    </div>
+  </div>
+  <div id="noDataMsg" class="no-data" style="display:none">
+    <div class="icon">📋</div><strong>No responses yet.</strong><br>Submit the survey to see analytics here.
+  </div>
+  <div id="dashContent">
+    <div class="kpi-strip">
+      <div class="kpi-card"><div class="kpi-label">Total Responses</div><div class="kpi-value" id="kpiTotal">—</div><span class="kpi-badge badge-gold">All submissions</span></div>
+      <div class="kpi-card"><div class="kpi-label">Avg Satisfaction</div><div class="kpi-value" id="kpiSatisfaction">—</div><span class="kpi-badge badge-green">Out of 5.0</span></div>
+      <div class="kpi-card"><div class="kpi-label">Net Promoter Score</div><div class="kpi-value" id="kpiNPS">—</div><span class="kpi-badge badge-gold">NPS Index</span></div>
+      <div class="kpi-card"><div class="kpi-label">Water Quality (Good+)</div><div class="kpi-value" id="kpiQuality">—</div><span class="kpi-badge badge-green">% positive</span></div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">💧 Service Reliability</div>
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Reliability Satisfaction</h3><div class="chart-canvas-wrap"><canvas id="chartReliability"></canvas></div></div>
+        <div class="chart-card"><h3>Interruption Frequency</h3><div class="chart-canvas-wrap"><canvas id="chartInterruptions"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">🔬 Water Quality</div>
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Quality Ratings</h3><div class="chart-canvas-wrap"><canvas id="chartWaterQuality"></canvas></div></div>
+        <div class="chart-card"><h3>Safety Confidence</h3><div class="chart-canvas-wrap"><canvas id="chartSafety"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">💳 Billing &amp; Payments</div>
+      <div class="charts-grid three">
+        <div class="chart-card"><h3>Billing Accuracy</h3><div class="chart-canvas-wrap"><canvas id="chartBilling"></canvas></div></div>
+        <div class="chart-card"><h3>Payment Options</h3><div class="chart-canvas-wrap"><canvas id="chartPayment"></canvas></div></div>
+        <div class="chart-card"><h3>Charges Fairness</h3><div class="chart-canvas-wrap"><canvas id="chartFairness"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">📡 Communication &amp; Responsiveness</div>
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Comms vs Responsiveness by Region</h3><div class="chart-canvas-wrap"><canvas id="chartRadar"></canvas></div></div>
+        <div class="chart-card"><h3>Online Access Ease</h3><div class="chart-canvas-wrap"><canvas id="chartOnline"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">🤝 Customer Support</div>
+      <div class="charts-grid">
+        <div class="chart-card gauge-wrap">
+          <h3>Staff Professionalism Gauge</h3>
+          <svg class="gauge-svg" viewBox="0 0 200 110">
+            <defs><linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#e74c3c"/><stop offset="50%" style="stop-color:#e8a92d"/><stop offset="100%" style="stop-color:#2ecc71"/>
+            </linearGradient></defs>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#e8eef4" stroke-width="16" stroke-linecap="round"/>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gaugeArc" style="transition:stroke-dashoffset .8s ease"/>
+            <line x1="100" y1="100" x2="100" y2="30" stroke="#1a4a8a" stroke-width="3" stroke-linecap="round" id="gaugeNeedle" style="transform-origin:100px 100px;transform:rotate(0deg);transition:transform .8s ease"/>
+            <circle cx="100" cy="100" r="6" fill="#1a4a8a"/>
+            <text x="20" y="115" font-size="10" fill="#6b7a8d">1</text><text x="177" y="115" font-size="10" fill="#6b7a8d">5</text>
+          </svg>
+          <div class="nps-score" id="gaugeScore">—</div>
+          <div class="nps-label">Avg Professionalism Score</div>
+        </div>
+        <div class="chart-card"><h3>Issue Resolution Effectiveness</h3><div class="chart-canvas-wrap"><canvas id="chartResolution"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">🌟 Overall Satisfaction</div>
+      <div class="charts-grid">
+        <div class="chart-card nps-wrap">
+          <h3>Net Promoter Score Dial</h3>
+          <svg viewBox="0 0 200 120" style="width:200px;height:120px">
+            <path d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="#fdecea" stroke-width="18" stroke-linecap="round"/>
+            <path d="M 20 105 A 80 80 0 0 1 100 25" fill="none" stroke="#fef7e7" stroke-width="18" stroke-linecap="round"/>
+            <path d="M 100 25 A 80 80 0 0 1 180 105" fill="none" stroke="#e8f8f0" stroke-width="18" stroke-linecap="round"/>
+            <text x="20" y="118" font-size="9" fill="#e74c3c" text-anchor="middle">Detractors</text>
+            <text x="100" y="12" font-size="9" fill="#e8a92d" text-anchor="middle">Passives</text>
+            <text x="180" y="118" font-size="9" fill="#2ecc71" text-anchor="middle">Promoters</text>
+            <line x1="100" y1="105" x2="100" y2="35" stroke="#1a4a8a" stroke-width="3" stroke-linecap="round" id="npsNeedle" style="transform-origin:100px 105px;transform:rotate(-90deg);transition:transform .8s ease"/>
+            <circle cx="100" cy="105" r="6" fill="#1a4a8a"/>
+          </svg>
+          <div class="nps-score" id="npsValue">—</div>
+          <div class="nps-label">Net Promoter Score (−100 to +100)</div>
+          <div style="display:flex;gap:1.5rem;justify-content:center;margin-top:.75rem;font-size:.8rem">
+            <span><span style="color:var(--teal);font-weight:700" id="pPct">0%</span> Promoters</span>
+            <span><span style="color:var(--gold);font-weight:700" id="pPas">0%</span> Passives</span>
+            <span><span style="color:var(--danger);font-weight:700" id="pDet">0%</span> Detractors</span>
+          </div>
+        </div>
+        <div class="chart-card"><h3>Overall Satisfaction Distribution</h3><div class="chart-canvas-wrap"><canvas id="chartOverall"></canvas></div></div>
+      </div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">💬 Common Improvement Themes</div>
+      <div class="chart-card"><h3>Keyword Frequency from Open-ended Responses</h3><div id="wordCloud" class="word-cloud"></div></div>
+    </div>
+    <div class="charts-section">
+      <div class="section-heading">📋 Responses Table</div>
+      <div class="chart-card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Region</th><th>Reliability</th><th>Quality</th><th>Billing</th><th>Comms</th><th>Support</th><th>Overall</th><th>NPS</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  ▼▼▼  FILL IN YOUR CREDENTIALS BELOW  ▼▼▼
+// ═══════════════════════════════════════════════════
+const SUPABASE_URL = 'https://tjlrtzogftyoiubzdgpu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqbHJ0em9nZnR5b2l1YnpkZ3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MTQ3NDUsImV4cCI6MjA4ODE5MDc0NX0.edhEcFgcdQxPDgmIONetkg-XuPzSfsuutpoPVRMTdgc';
+const DASHBOARD_PASSCODE = 'WATER2025';
+// ═══════════════════════════════════════════════════
+
+// Session flag — cleared when tab closes
+let dashUnlocked = false;
+
+// ── Passcode gate ──
+function goDashboard() {
+  if (dashUnlocked) {
+    showPage('dashboard');
+    loadAndRender();
+  } else {
+    document.getElementById('gateOverlay').classList.remove('hidden');
+    setTimeout(() => document.getElementById('gateInput').focus(), 100);
+  }
+}
+
+function goSurvey() { showPage('survey'); }
+
+function checkPasscode() {
+  const val = document.getElementById('gateInput').value;
+  const err = document.getElementById('gateError');
+  if (val === DASHBOARD_PASSCODE) {
+    dashUnlocked = true;
+    document.getElementById('gateOverlay').classList.add('hidden');
+    document.getElementById('gateInput').value = '';
+    err.textContent = '';
+    showPage('dashboard');
+    loadAndRender();
+  } else {
+    err.textContent = 'Incorrect passcode. Please try again.';
+    const input = document.getElementById('gateInput');
+    input.classList.remove('shake');
+    void input.offsetWidth;
+    input.classList.add('shake');
+    input.value = '';
+  }
+}
+
+function lockDashboard() {
+  dashUnlocked = false;
+  showPage('survey');
+  showToast('Dashboard locked', 'success');
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tabSurvey').classList.toggle('active', name === 'survey');
+  document.getElementById('tabDash').classList.toggle('active', name === 'dashboard');
+}
+
+// ── Supabase REST ──
+function sbFetch(path, opts = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(opts.method === 'POST' ? {'Prefer':'return=minimal'} : {}),
+      ...(opts.headers || {})
+    }
+  });
+}
+
+async function testConnection() {
+  try {
+    const r = await sbFetch('survey_responses?select=id&limit=1');
+    if (r.ok) {
+      setStatus('connected', 'Live');
+      const all = await (await sbFetch('survey_responses?select=id')).json();
+      document.getElementById('responseCount').textContent = all.length;
+    } else { setStatus('error', 'DB error'); }
+  } catch { setStatus('error', 'Offline'); }
+}
+
+function setStatus(cls, txt) {
+  document.getElementById('dbDot').className = 'dot ' + cls;
+  document.getElementById('dbStatusText').textContent = txt;
+}
+
+// ── Progress ──
+const REQUIRED = ['reliability','interruptions','resolution_speed','water_quality','safety_confidence',
+  'billing_accuracy','payment_options','charges_fair','communication','responsiveness','online_access',
+  'professionalism','issue_resolution','overall','nps'];
+
+document.getElementById('surveyForm').addEventListener('change', () => {
+  const f = document.getElementById('surveyForm');
+  const n = REQUIRED.filter(n => f.querySelector(`[name="${n}"]:checked`)).length;
+  document.getElementById('progressFill').style.width = Math.round(n/REQUIRED.length*100)+'%';
+  document.getElementById('progressLabel').textContent = `${n} of ${REQUIRED.length} questions answered`;
+});
+
+// ── Submit ──
+document.getElementById('surveyForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd = new FormData(this), entry = {};
+  for (let [k,v] of fd.entries()) entry[k] = v;
+  for (const n of REQUIRED) { if (!entry[n]) { showToast('Please answer all required questions','error'); return; } }
+  ['reliability','water_quality','safety_confidence','billing_accuracy','payment_options','charges_fair',
+   'communication','responsiveness','online_access','professionalism','issue_resolution','overall']
+    .forEach(k => { if(entry[k]) entry[k] = parseInt(entry[k]); });
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitText').style.display = 'none';
+  document.getElementById('submitSpinner').style.display = 'block';
+  try {
+    const r = await sbFetch('survey_responses', {method:'POST', body:JSON.stringify(entry)});
+    if (!r.ok) throw new Error(await r.text());
+    this.reset();
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressLabel').textContent = '0 of 15 questions answered';
+    showToast('✅ Thank you! Your response has been saved.','success');
+    testConnection();
+  } catch(err) { showToast('❌ Submission failed: '+err.message,'error'); }
+  finally {
+    btn.disabled = false;
+    document.getElementById('submitText').style.display = 'inline';
+    document.getElementById('submitSpinner').style.display = 'none';
+  }
+});
+
+// ── Dashboard ──
+let responses = [];
+const charts = {};
+const P = ['#1a4a8a','#0e7c7b','#4db8d4','#e8a92d','#e74c3c','#2ecc71','#9b59b6'];
+const BC = ['#e74c3c','#e67e22','#e8a92d','#4db8d4','#0e7c7b'];
+
+async function loadAndRender() {
+  try {
+    const r = await sbFetch('survey_responses?select=*&order=created_at.desc');
+    if (!r.ok) throw new Error();
+    responses = await r.json();
+    document.getElementById('responseCount').textContent = responses.length;
+    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()} · ${responses.length} response(s)`;
+    renderDashboard();
+  } catch { showToast('Could not load data','error'); }
+}
+
+function clearAllData() {
+  document.getElementById('clearOverlay').classList.remove('hidden');
+  document.getElementById('clearInput').value = '';
+  document.getElementById('clearError').textContent = '';
+  setTimeout(() => document.getElementById('clearInput').focus(), 100);
+}
+
+function cancelClear() {
+  document.getElementById('clearOverlay').classList.add('hidden');
+  document.getElementById('clearInput').value = '';
+  document.getElementById('clearError').textContent = '';
+}
+
+async function confirmClear() {
+  const val = document.getElementById('clearInput').value;
+  const err = document.getElementById('clearError');
+  if (val !== DASHBOARD_PASSCODE) {
+    err.textContent = 'Incorrect passcode. Please try again.';
+    const inp = document.getElementById('clearInput');
+    inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+    inp.value = '';
+    return;
+  }
+  document.getElementById('clearOverlay').classList.add('hidden');
+  try {
+    await sbFetch('survey_responses?id=neq.00000000-0000-0000-0000-000000000000',{method:'DELETE'});
+    responses = [];
+    document.getElementById('responseCount').textContent = 0;
+    renderDashboard();
+    showToast('All data cleared','success');
+  } catch(err){ showToast('Error: '+err.message,'error'); }
+}
+
+const avg = a => a.length ? (a.reduce((x,y)=>x+y,0)/a.length).toFixed(2) : 0;
+const cnt = (f,v) => responses.filter(r=>r[f]===v).length;
+const dstr = id => { if(charts[id]){charts[id].destroy();delete charts[id];} };
+
+function bar(id,labels,data,colors){
+  dstr(id);
+  charts[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:colors||P,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,grid:{color:'#f0f4f8'},ticks:{stepSize:1}},x:{grid:{display:false}}}}});
+}
+function pie(id,labels,data){
+  dstr(id);
+  charts[id]=new Chart(document.getElementById(id),{type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:P,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},padding:10}}},cutout:'55%'}});
+}
+function radar(id,labels,d1,d2){
+  dstr(id);
+  charts[id]=new Chart(document.getElementById(id),{type:'radar',
+    data:{labels,datasets:[
+      {label:'Communication',data:d1,backgroundColor:'rgba(77,184,212,.2)',borderColor:'#4db8d4',pointBackgroundColor:'#4db8d4',borderWidth:2},
+      {label:'Responsiveness',data:d2,backgroundColor:'rgba(14,124,123,.2)',borderColor:'#0e7c7b',pointBackgroundColor:'#0e7c7b',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}}}},plugins:{legend:{labels:{font:{size:11}}}}}});
+}
+
+function renderDashboard(){
+  const n=responses.length;
+  document.getElementById('noDataMsg').style.display=n?'none':'block';
+  document.getElementById('dashContent').style.display=n?'block':'none';
+  if(!n)return;
+
+  document.getElementById('kpiTotal').textContent=n;
+  document.getElementById('kpiSatisfaction').textContent=avg(responses.map(r=>r.overall))+' ★';
+  const pro=responses.filter(r=>r.nps==='Promoter').length;
+  const det=responses.filter(r=>r.nps==='Detractor').length;
+  const pas=n-pro-det;
+  const nps=Math.round(((pro-det)/n)*100);
+  document.getElementById('kpiNPS').textContent=nps;
+  document.getElementById('kpiQuality').textContent=Math.round(responses.filter(r=>r.water_quality>=4).length/n*100)+'%';
+
+  bar('chartReliability',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('reliability',v)),BC);
+  const IL=['Never','Rarely','Sometimes','Often','Very Often'];
+  bar('chartInterruptions',IL,IL.map(l=>cnt('interruptions',l)),[...BC].reverse());
+  pie('chartWaterQuality',['Excellent','Good','Fair','Poor','Very Poor'],[5,4,3,2,1].map(v=>cnt('water_quality',v)));
+  bar('chartSafety',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('safety_confidence',v)),BC);
+  bar('chartBilling',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('billing_accuracy',v)),BC);
+  bar('chartPayment',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('payment_options',v)),BC);
+  bar('chartFairness',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('charges_fair',v)),BC);
+
+  const REG=['Westlands','Roysambu','Dagoretti','Lower Embakasi','Upper Embakasi','Kasarani','Central','Informal','Langata'];
+  radar('chartRadar',REG,
+    REG.map(r=>{const s=responses.filter(x=>x.region===r);return s.length?+avg(s.map(x=>x.communication)):0;}),
+    REG.map(r=>{const s=responses.filter(x=>x.region===r);return s.length?+avg(s.map(x=>x.responsiveness)):0;}));
+  bar('chartOnline',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('online_access',v)),BC);
+
+  const profAvg=+avg(responses.map(r=>r.professionalism));
+  const pct=(profAvg-1)/4;
+  document.getElementById('gaugeArc').style.strokeDashoffset=251.2-(251.2*pct);
+  document.getElementById('gaugeNeedle').style.transform=`rotate(${-90+pct*180}deg)`;
+  document.getElementById('gaugeScore').textContent=profAvg||'—';
+  bar('chartResolution',['1★','2★','3★','4★','5★'],[1,2,3,4,5].map(v=>cnt('issue_resolution',v)),BC);
+
+  document.getElementById('npsNeedle').style.transform=`rotate(${-90+(((nps+100)/200)*180)}deg)`;
+  document.getElementById('npsValue').textContent=nps;
+  document.getElementById('pPct').textContent=Math.round(pro/n*100)+'%';
+  document.getElementById('pPas').textContent=Math.round(pas/n*100)+'%';
+  document.getElementById('pDet').textContent=Math.round(det/n*100)+'%';
+  pie('chartOverall',['Very Dissatisfied','Dissatisfied','Neutral','Satisfied','Very Satisfied'],[1,2,3,4,5].map(v=>cnt('overall',v)));
+
+  // Word cloud
+  const stop=new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','is','are','we','our','your','i','it','that','this','be','have','they','not','more','would','like','please','need','should','can','us','by','do','so','as','been','also']);
+  const freq={};
+  responses.map(r=>r.suggestions||'').filter(Boolean).forEach(s=>
+    s.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).forEach(w=>{if(w.length>3&&!stop.has(w))freq[w]=(freq[w]||0)+1;}));
+  const wds=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,25);
+  const el=document.getElementById('wordCloud');
+  el.innerHTML='';
+  if(!wds.length){el.innerHTML='<span style="color:#aaa">No suggestions yet</span>';return;}
+  const mx=wds[0][1];
+  wds.forEach(([w,c])=>{
+    const s=document.createElement('span');
+    s.className='word'; s.textContent=w;
+    s.style.fontSize=(12+(c/mx)*22)+'px';
+    s.style.opacity=0.5+(c/mx)*0.5;
+    s.style.color=P[Math.floor(Math.random()*P.length)];
+    el.appendChild(s);
+  });
+
+  document.getElementById('tableBody').innerHTML=responses.map((r,i)=>`
+    <tr><td>${i+1}</td><td>${r.created_at?new Date(r.created_at).toLocaleDateString():'—'}</td>
+    <td>${r.customer_type||'—'}</td><td>${r.region||'—'}</td>
+    <td>${r.reliability||'—'}★</td><td>${r.water_quality||'—'}★</td>
+    <td>${r.billing_accuracy||'—'}★</td><td>${r.communication||'—'}★</td>
+    <td>${r.professionalism||'—'}★</td><td>${r.overall||'—'}★</td>
+    <td><span style="font-weight:600;color:${r.nps==='Promoter'?'var(--teal)':r.nps==='Detractor'?'var(--danger)':'var(--gold)'}">${r.nps||'—'}</span></td></tr>`).join('');
+}
+
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),4000);
+}
+
+// ── Export CSV ──
+function exportCSV() {
+  if (!responses.length) { showToast('No data to export','error'); return; }
+  const headers = ['#','Date','Customer Type','Region','Reliability','Interruptions','Resolution Speed',
+    'Water Quality','Safety Confidence','Billing Accuracy','Payment Options','Charges Fair',
+    'Communication','Responsiveness','Online Access','Professionalism','Issue Resolution',
+    'Overall','NPS','Suggestions'];
+  const fields = ['customer_type','region','reliability','interruptions','resolution_speed',
+    'water_quality','safety_confidence','billing_accuracy','payment_options','charges_fair',
+    'communication','responsiveness','online_access','professionalism','issue_resolution','overall','nps','suggestions'];
+  const esc = v => { const s=String(v??''); return (s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`:s; };
+  const rows = responses.map((r,i) => [
+    i+1,
+    r.created_at ? new Date(r.created_at).toLocaleDateString() : '—',
+    ...fields.map(f => esc(r[f]??''))
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = `NCWSC_Survey_Responses_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV downloaded ✓','success');
+}
+
+// ── Export PDF ──
+async function exportPDF() {
+  if (!responses.length) { showToast('No data to export','error'); return; }
+  const btn = document.getElementById('pdfBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    const {jsPDF} = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const W=210,H=297,M=10,CW=190;
+
+    // ── Cover page ──
+    pdf.setFillColor(10,22,40); pdf.rect(0,0,W,H,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(22);
+    pdf.text('NCWSC Customer Experience',W/2,100,{align:'center'});
+    pdf.text('Survey Report',W/2,114,{align:'center'});
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(12); pdf.setTextColor(77,184,212);
+    pdf.text('Nairobi City Water & Sewerage Company',W/2,130,{align:'center'});
+    pdf.setTextColor(180,200,220); pdf.setFontSize(10);
+    pdf.text(`Generated: ${new Date().toLocaleDateString('en-KE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`,W/2,145,{align:'center'});
+    pdf.text(`Total Responses: ${responses.length}`,W/2,155,{align:'center'});
+
+    // ── Page 2: Executive summary ──
+    pdf.addPage();
+    pdf.setFillColor(240,246,255); pdf.rect(0,0,W,H,'F');
+    pdf.setFillColor(10,22,40); pdf.rect(0,0,W,18,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.text('Executive Summary',M,12);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(77,184,212);
+    pdf.text(new Date().toLocaleDateString(),W-M,12,{align:'right'});
+
+    const n=responses.length;
+    const avgOv=(responses.reduce((a,r)=>a+(r.overall||0),0)/n).toFixed(2);
+    const pro=responses.filter(r=>r.nps==='Promoter').length;
+    const det=responses.filter(r=>r.nps==='Detractor').length;
+    const nps=Math.round(((pro-det)/n)*100);
+    const qGood=responses.filter(r=>r.water_quality>=4).length;
+
+    // KPI boxes
+    const kpis=[
+      {l:'Total Responses',v:String(n),c:[232,169,45]},
+      {l:'Avg Satisfaction',v:avgOv+' / 5.0',c:[14,124,123]},
+      {l:'Net Promoter Score',v:String(nps),c:[26,74,138]},
+      {l:'Water Quality Good+',v:Math.round(qGood/n*100)+'%',c:[77,184,212]}
+    ];
+    let kx=M; const kw=(CW-6)/4;
+    kpis.forEach(k=>{
+      pdf.setFillColor(255,255,255); pdf.roundedRect(kx,24,kw,28,3,3,'F');
+      pdf.setFillColor(...k.c); pdf.roundedRect(kx,24,kw,4,2,2,'F');
+      pdf.setTextColor(100,110,130); pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+      pdf.text(k.l,kx+kw/2,33,{align:'center'});
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.setTextColor(...k.c);
+      pdf.text(k.v,kx+kw/2,44,{align:'center'});
+      kx+=kw+2;
+    });
+
+    // Section scores table
+    const secs=[
+      {n:'💧 Service Reliability',fs:['reliability'],ls:['Reliability Rating']},
+      {n:'🔬 Water Quality',fs:['water_quality','safety_confidence'],ls:['Quality Rating','Safety Confidence']},
+      {n:'💳 Billing & Payments',fs:['billing_accuracy','payment_options','charges_fair'],ls:['Billing Accuracy','Payment Options','Charges Fairness']},
+      {n:'📡 Communication',fs:['communication','responsiveness','online_access'],ls:['Communication','Responsiveness','Online Access']},
+      {n:'🤝 Customer Support',fs:['professionalism','issue_resolution'],ls:['Professionalism','Issue Resolution']},
+      {n:'🌟 Overall',fs:['overall'],ls:['Overall Satisfaction']},
+    ];
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(10,22,40);
+    pdf.text('Section Performance Summary',M,62);
+    let ty=68;
+    secs.forEach(sec=>{
+      pdf.setFillColor(10,22,40); pdf.rect(M,ty,CW,7,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+      pdf.text(sec.n,M+2,ty+5); ty+=7;
+      sec.fs.forEach((f,i)=>{
+        const vals=responses.map(r=>+(r[f]||0)).filter(v=>v>0);
+        const av=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2):'—';
+        const col=+av>=4?[14,124,123]:+av>=3?[232,169,45]:[231,76,60];
+        pdf.setFillColor(i%2===0?248:255,250,255); pdf.rect(M,ty,CW,7,'F');
+        pdf.setTextColor(60,70,90); pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+        pdf.text(sec.ls[i],M+4,ty+5);
+        const bx=M+75,bw=70,fw=Math.max(0,(+av/5)*bw);
+        pdf.setFillColor(220,230,240); pdf.roundedRect(bx,ty+2,bw,3,1,1,'F');
+        if(fw>0){pdf.setFillColor(...col); pdf.roundedRect(bx,ty+2,fw,3,1,1,'F');}
+        pdf.setFont('helvetica','bold'); pdf.setTextColor(...col);
+        pdf.text(`${av} ★`,bx+bw+3,ty+5); ty+=7;
+      });
+    });
+
+    // ── Page 3: Dashboard screenshot ──
+    pdf.addPage();
+    pdf.setFillColor(240,246,255); pdf.rect(0,0,W,H,'F');
+    pdf.setFillColor(10,22,40); pdf.rect(0,0,W,18,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.text('Charts & Analytics',M,12);
+
+    const el=document.getElementById('dashContent');
+    const cv=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:'#f0f6ff',logging:false,windowWidth:1200});
+    const imgD=cv.toDataURL('image/jpeg',0.85);
+    const imgH=(cv.height/cv.width)*CW;
+    const maxH=H-25;
+    if(imgH<=maxH){
+      pdf.addImage(imgD,'JPEG',M,22,CW,imgH);
+    } else {
+      const ratio=cv.width/CW,sliceH=maxH*ratio;
+      let sy=0,first=true;
+      while(sy<cv.height){
+        if(!first){pdf.addPage();pdf.setFillColor(240,246,255);pdf.rect(0,0,W,H,'F');}
+        const th=Math.min(sliceH,cv.height-sy);
+        const tc=document.createElement('canvas');tc.width=cv.width;tc.height=th;
+        tc.getContext('2d').drawImage(cv,0,-sy);
+        pdf.addImage(tc.toDataURL('image/jpeg',0.85),'JPEG',M,first?22:5,CW,th/ratio);
+        sy+=th;first=false;
+      }
+    }
+
+    // ── Page: Raw data table ──
+    pdf.addPage();
+    pdf.setFillColor(240,246,255); pdf.rect(0,0,W,H,'F');
+    pdf.setFillColor(10,22,40); pdf.rect(0,0,W,18,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.text('Response Data',M,12);
+    const cw=[8,18,20,16,12,12,12,12,12,14,54];
+    const ch=['#','Date','Type','Region','Reliab','Quality','Billing','Comms','Support','NPS','Suggestions'];
+    let dy=24;
+    pdf.setFillColor(10,22,40); pdf.rect(M,dy,CW,7,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
+    let cx=M; ch.forEach((h,i)=>{pdf.text(h,cx+1,dy+5);cx+=cw[i];}); dy+=7;
+    pdf.setFont('helvetica','normal');
+    responses.forEach((r,i)=>{
+      if(dy>H-15){pdf.addPage();pdf.setFillColor(240,246,255);pdf.rect(0,0,W,H,'F');dy=10;}
+      pdf.setFillColor(i%2===0?248:255,250,255); pdf.rect(M,dy,CW,6,'F');
+      pdf.setTextColor(40,50,70); pdf.setFontSize(6.5);
+      const sug=(r.suggestions||'').substring(0,50)+((r.suggestions||'').length>50?'…':'');
+      const vals=[i+1,r.created_at?new Date(r.created_at).toLocaleDateString():'—',
+        r.customer_type||'—',r.region||'—',(r.reliability||'—')+'★',(r.water_quality||'—')+'★',
+        (r.billing_accuracy||'—')+'★',(r.communication||'—')+'★',(r.professionalism||'—')+'★',
+        r.nps||'—',sug];
+      cx=M; vals.forEach((v,j)=>{pdf.text(String(v),cx+1,dy+4);cx+=cw[j];}); dy+=6;
+    });
+
+    pdf.save(`NCWSC_Survey_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('PDF downloaded ✓','success');
+  } catch(err){ console.error(err); showToast('PDF failed: '+err.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='📄 Export PDF'; }
+}
+
+// Init
+testConnection();
+</script>
+</body>
+</html>
